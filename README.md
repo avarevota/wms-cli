@@ -137,6 +137,16 @@ src/
 
 Adding a new resource: append a `ResourceDef` entry in `src/lib/resources.ts` — no new command files needed.
 
+## Operations Guide
+
+For detailed status codes, workflows, and operational guidance, see [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md).
+
+This guide is especially useful for:
+- Understanding status code meanings (e.g., what does status "2" mean for inbounds?)
+- Common operational workflows
+- Data relationships between entities
+- CLI tips for daily operations
+
 ## License
 
 UNLICENSED — internal use only.
