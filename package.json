@@ -24,12 +24,18 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.0",
+    "@typescript-eslint/parser": "^8.59.0",
     "eslint": "^8.0.0",
     "tsup": "^8.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },
-  "keywords": ["wms", "cli", "revota"],
+  "keywords": [
+    "wms",
+    "cli",
+    "revota"
+  ],
   "license": "UNLICENSED",
   "private": true
 }
