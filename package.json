@@ -1,0 +1,35 @@
+{
+  "name": "@revota/wms-cli",
+  "version": "0.1.0",
+  "description": "CLI for Revota WMS",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "bin": {
+    "wms": "./dist/index.js",
+    "revota": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --target node20 --out-dir dist --clean",
+    "dev": "tsx src/index.ts",
+    "lint": "eslint src --fix",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "cli-table3": "^0.6.5",
+    "commander": "^13.0.0",
+    "conf": "^13.0.0",
+    "kleur": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "eslint": "^8.0.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["wms", "cli", "revota"],
+  "license": "UNLICENSED",
+  "private": true
+}
