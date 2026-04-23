@@ -15,6 +15,11 @@ export function registerListCommand(program: Command): void {
     .option('--area <value>', 'Filter by area (where supported)')
     .option('--from <date>', 'From date (ISO, where supported)')
     .option('--to <date>', 'To date (ISO, where supported)')
+    .option('--type <value>', 'Filter by type (where supported)')
+    .option('--customer-id <id>', 'Filter by customer id (where supported)')
+    .option('--brand-id <id>', 'Filter by brand id (where supported)')
+    .option('--warehouse-id <id>', 'Filter by warehouse id (where supported)')
+    .option('--assigned <value>', 'Filter by assignee (where supported)')
     .option('--limit <n>', 'Page size, max 50 (where supported)')
     .option('--page <n>', 'Page number (where supported)');
 

@@ -43,6 +43,20 @@ const fmtDate = (v: unknown): string =>
   v ? new Date(String(v)).toLocaleString() : '-';
 const str = (v: unknown): string => (v === null || v === undefined || v === '' ? '-' : String(v));
 
+// Mirrors AdjustmentStatusEnum in the backend
+// (PENDING=1, WAITING_FOR_APPROVAL=2, DONE=3, CANCELED=99).
+const ADJUSTMENT_STATUS: Record<number, string> = {
+  1: 'PENDING',
+  2: 'WAITING_FOR_APPROVAL',
+  3: 'DONE',
+  99: 'CANCELED',
+};
+const adjustmentStatusLabel = (v: unknown): string => {
+  if (v === null || v === undefined) return '-';
+  const n = Number(v);
+  return ADJUSTMENT_STATUS[n] ?? String(v);
+};
+
 export const RESOURCES: ResourceDef[] = [
   {
     name: 'inbounds',
@@ -185,6 +199,46 @@ export const RESOURCES: ResourceDef[] = [
       { label: 'ID', pick: (i) => i.id },
       { label: 'Name', pick: (i) => i.name },
       { label: 'Code', pick: (i) => i.code },
+    ],
+  },
+  {
+    name: 'adjustments',
+    aliases: ['adjustment'],
+    endpoint: '/adjustments',
+    // AdjustmentQuery: status/type are numeric enums (see AdjustmentStatusEnum).
+    listQuery: {
+      status: 'adjustmentStatus',
+      type: 'adjustmentType',
+      customerId: 'customerId',
+      brandId: 'brandId',
+      warehouseId: 'warehouseId',
+      assigned: 'assigned',
+      from: 'startDate',
+      to: 'endDate',
+      limit: 'limit',
+      page: 'page',
+    },
+    listColumns: [
+      { header: 'ID', pick: (i) => i.id },
+      { header: 'Code', pick: (i) => i.code },
+      { header: 'Warehouse', pick: (i) => i.warehouseName ?? i.warehouseId },
+      { header: 'Status', pick: (i) => adjustmentStatusLabel(i.status) },
+      { header: 'Discrepancies', pick: (i) => i.discrepancies ?? 0 },
+      { header: 'Due', pick: (i) => fmtDate(i.dueDate) },
+    ],
+    detailFields: [
+      { label: 'ID', pick: (i) => i.id },
+      { label: 'Code', pick: (i) => i.code },
+      { label: 'Status', pick: (i) => adjustmentStatusLabel(i.status) },
+      { label: 'Type', pick: (i) => i.type },
+      { label: 'Warehouse', pick: (i) => i.warehouseName ?? i.warehouseId },
+      { label: 'Customer', pick: (i) => i.customerName ?? i.customerId },
+      { label: 'Brand', pick: (i) => i.brandName ?? i.brandId },
+      { label: 'Assigned To', pick: (i) => i.assignedTo },
+      { label: 'Due Date', pick: (i) => fmtDate(i.dueDate) },
+      { label: 'Note', pick: (i) => i.note },
+      { label: 'Discrepancies', pick: (i) => i.discrepancies ?? 0 },
+      { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
     ],
   },
   {
