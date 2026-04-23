@@ -4,6 +4,7 @@ import { registerAuthCommands } from './commands/auth.js';
 import { registerConfigCommands } from './commands/config.js';
 import { registerListCommand } from './commands/list.js';
 import { registerGetCommand } from './commands/get.js';
+import { registerUpdateCommand } from './commands/update.js';
 import { resourceNames } from './lib/resources.js';
 
 const program = new Command();
@@ -23,6 +24,7 @@ registerAuthCommands(program);
 registerConfigCommands(program);
 registerListCommand(program);
 registerGetCommand(program);
+registerUpdateCommand(program);
 
 program.addHelpText(
   'after',
@@ -35,6 +37,8 @@ Examples:
   wms list inbounds --status PENDING
   wms list stock --sku ABC123
   wms get sku <id>
+  wms update sku <variantId> --name "New Name" --price 19900
+  wms update sku <variantId> --data '{"name":"N","sku":"S","skuExternal":"X","brandId":"...","categoryId":"...","method":1}'
   wms config set apiUrl https://wms.example.com
 `
 );

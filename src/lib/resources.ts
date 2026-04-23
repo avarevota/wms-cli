@@ -17,6 +17,26 @@ export interface ResourceDef {
   idParam?: string;
   // Resource has no `GET /resource/:id` endpoint — disable `wms get <resource>`.
   supportsGet?: boolean;
+  // Update support. If present, `wms update <resource> <id>` is enabled.
+  update?: UpdateDef;
+}
+
+export interface UpdateFieldDef {
+  // Commander flag definition, e.g. '--name <value>'
+  flag: string;
+  // Human-readable description
+  description: string;
+  // API payload key
+  apiKey: string;
+  // Value coercion
+  type: 'string' | 'number' | 'json';
+}
+
+export interface UpdateDef {
+  method: 'PUT' | 'PATCH';
+  fields: UpdateFieldDef[];
+  // Override the default `${endpoint}/${id}` path.
+  pathFor?: (id: string) => string;
 }
 
 const fmtDate = (v: unknown): string =>
@@ -109,6 +129,26 @@ export const RESOURCES: ResourceDef[] = [
       { label: 'Name', pick: (i) => i.name },
       { label: 'Description', pick: (i) => i.description },
     ],
+    // PUT /products/:id expects the product-variant id; the payload updates
+    // both variant fields (sku, price, dimension…) and the product master name.
+    update: {
+      method: 'PUT',
+      fields: [
+        { flag: '--name <value>', description: 'Product name', apiKey: 'name', type: 'string' },
+        { flag: '--sku <value>', description: 'Variant SKU', apiKey: 'sku', type: 'string' },
+        { flag: '--sku-external <value>', description: 'External SKU', apiKey: 'skuExternal', type: 'string' },
+        { flag: '--msku <value>', description: 'Master SKU', apiKey: 'msku', type: 'string' },
+        { flag: '--brand-id <value>', description: 'Brand id', apiKey: 'brandId', type: 'string' },
+        { flag: '--category-id <value>', description: 'Category id', apiKey: 'categoryId', type: 'string' },
+        { flag: '--customer-id <value>', description: 'Customer id', apiKey: 'customerId', type: 'string' },
+        { flag: '--cogs <number>', description: 'Cost of goods', apiKey: 'cogs', type: 'number' },
+        { flag: '--price <number>', description: 'Sell price', apiKey: 'price', type: 'number' },
+        { flag: '--method <number>', description: 'Costing method (default 1)', apiKey: 'method', type: 'number' },
+        { flag: '--note <value>', description: 'Change note', apiKey: 'note', type: 'string' },
+        { flag: '--attributes <json>', description: 'Attributes as JSON array', apiKey: 'attributes', type: 'json' },
+        { flag: '--dimension <json>', description: 'Dimension object as JSON', apiKey: 'dimension', type: 'json' },
+      ],
+    },
   },
   {
     name: 'locations',
@@ -213,6 +253,23 @@ export async function fetchOne(
   id: string
 ): Promise<any> {
   return apiRequest<any>(`${resource.endpoint}/${encodeURIComponent(id)}`);
+}
+
+export async function fetchUpdate(
+  resource: ResourceDef,
+  id: string,
+  payload: Record<string, unknown>
+): Promise<any> {
+  if (!resource.update) {
+    throw new Error(`Resource "${resource.name}" does not support update`);
+  }
+  const path = resource.update.pathFor
+    ? resource.update.pathFor(id)
+    : `${resource.endpoint}/${encodeURIComponent(id)}`;
+  return apiRequest<any>(path, {
+    method: resource.update.method,
+    body: payload,
+  });
 }
 
 export { str };
