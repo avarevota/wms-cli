@@ -44,6 +44,14 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
 - [x] `wms logs` group: `activity`, `modules`, `webhooks`, `sync-stocks`
 - [x] Status label helper for `OpnameStatusEnum`
 
+### Adjustment polish (v0.5.1)
+- [x] `wms adjustment add-item <adjId>` — single-line convenience wrapper.
+- [x] `wms adjustment products <adjId>` — discoverability helper.
+- [x] Label-aware `--status` on `list adjustments` / `list opnames`
+      (case-insensitive `PENDING` / `WAITING_FOR_APPROVAL` / `DONE` /
+      `CANCELED`); numeric values still pass through.
+- [x] `ResourceDef.flagTransforms` extension point.
+
 ### Distribution
 - [x] Tarball build via `tsup` → `dist/index.js`
 - [x] GitHub Packages publishing config (`.npmrc`, `publishConfig`)
@@ -57,14 +65,10 @@ Ranked by ops impact (highest first). Pick one before starting; don't queue work
 **Why:** Customer-facing daily ops; the natural counterpart to the inbound flow.
 **Scope warning:** Larger surface than inbound — picklist generation, wave picks, pack confirmation, ship label, multiple status enums. Plan to split into sub-phases (pick first, then pack/ship).
 
-### 2. Adjustment / opname polish
-- [ ] `wms adjustment products <id>` helper (wraps `GET /adjustments/:id/products`) so users can discover variants when building `save-products` payloads.
-- [ ] `wms adjustment add-item <adjId>` convenience subcommand for single-line additions (no JSON).
-- [ ] `--status PENDING` (label) in addition to `--status 1` (numeric) on adjustments / opname / movements.
+### 2. Other follow-ups
 
-### 3. Other follow-ups
-
-- [ ] Reuse `OpnameStatusEnum` / `AdjustmentStatusEnum` mapping in a single helper if a third lifecycle resource lands.
+- [ ] Label-aware `--status` on `movements` (needs the movement enum mapping).
+- [ ] Reuse the status-label mapper in a single helper if a third lifecycle resource lands.
 - [ ] Restore `npm run lint` — `@typescript-eslint/*` deps were referenced by `eslint.config.js` but aren't installed.
 
 ## Out of scope (for now)

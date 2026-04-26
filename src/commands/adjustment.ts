@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { apiRequest } from '../lib/client.js';
+import { extractItems } from '../lib/resources.js';
 import { printError, printJson, printSuccess, printTable } from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
 
@@ -30,6 +31,24 @@ interface SaveProductsOptions {
   adjustmentId: string;
   warehouseId: string;
   items: string; // JSON array
+  json?: boolean;
+}
+
+interface AddItemOptions {
+  warehouseId: string;
+  productVariantId: string;
+  originLocation: string;
+  qty: string;
+  inboundDate?: string;
+  expiredDate?: string;
+  batchNumber?: string;
+  inventoryStatus?: string;
+  json?: boolean;
+}
+
+interface ProductsOptions {
+  limit?: string;
+  page?: string;
   json?: boolean;
 }
 
@@ -154,6 +173,108 @@ export function registerAdjustmentCommands(program: Command): void {
         if (failed > 0 && Array.isArray(result?.errors)) {
           for (const e of result.errors) console.error(`  - ${JSON.stringify(e)}`);
         }
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  group
+    .command('add-item <adjustmentId>')
+    .description('Add a single product line to an adjustment (convenience wrapper around save-products)')
+    .requiredOption('--warehouse-id <id>', 'Warehouse id')
+    .requiredOption('--product-variant-id <id>', 'Product variant id')
+    .requiredOption('--origin-location <code>', 'Origin storage code (e.g. BIN-A1)')
+    .requiredOption('--qty <n>', 'Counted / corrected quantity')
+    .option('--batch-number <value>', 'Batch number')
+    .option('--expired-date <iso>', 'Expired date, ISO string')
+    .option('--inbound-date <iso>', 'Inbound date, ISO string')
+    .option('--inventory-status <n>', 'InventoryStatusEnum value (auto-detected if omitted)')
+    .option('--json', 'Output raw JSON')
+    .action(async (adjustmentId: string, options: AddItemOptions) => {
+      try {
+        const qty = Number(options.qty);
+        if (Number.isNaN(qty)) {
+          printError('--qty must be a number');
+          process.exit(1);
+        }
+        const item: Record<string, unknown> = {
+          productVariantId: options.productVariantId,
+          originLocation: options.originLocation,
+          qty,
+        };
+        if (options.batchNumber) item.batchNumber = options.batchNumber;
+        if (options.expiredDate) item.expiredDate = options.expiredDate;
+        if (options.inboundDate) item.inboundDate = options.inboundDate;
+        if (options.inventoryStatus) {
+          const n = Number(options.inventoryStatus);
+          if (Number.isNaN(n)) {
+            printError('--inventory-status must be a number');
+            process.exit(1);
+          }
+          item.inventoryStatus = n;
+        }
+        const result = await apiRequest<any>('/adjustments/save-products', {
+          method: 'POST',
+          body: {
+            adjustmentId,
+            warehouseId: options.warehouseId,
+            items: [item],
+          },
+        });
+        if (options.json) {
+          printJson(result);
+          return;
+        }
+        const succeed = result?.succeed ?? 0;
+        const failed = result?.failed ?? 0;
+        if (failed > 0) {
+          printError(`Add failed (${failed} error(s))`);
+          if (Array.isArray(result?.errors)) {
+            for (const e of result.errors) console.error(`  - ${JSON.stringify(e)}`);
+          }
+          process.exit(1);
+        }
+        printSuccess(`Added 1 item to adjustment ${adjustmentId} (succeed=${succeed})`);
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  group
+    .command('products <adjustmentId>')
+    .description('List product variants currently available to adjust on this work order')
+    .option('--limit <n>', 'Page size, max 50')
+    .option('--page <n>', 'Page number')
+    .option('--json', 'Output raw JSON')
+    .action(async (adjustmentId: string, options: ProductsOptions) => {
+      try {
+        const params = new URLSearchParams();
+        if (options.limit) params.append('limit', options.limit);
+        if (options.page) params.append('page', options.page);
+        const qs = params.toString();
+        const raw = await apiRequest<unknown>(
+          `/adjustments/${encodeURIComponent(adjustmentId)}/products${qs ? `?${qs}` : ''}`
+        );
+        if (options.json) {
+          printJson(raw);
+          return;
+        }
+        const items = extractItems(raw);
+        if (items.length === 0) {
+          console.log('No products found');
+          return;
+        }
+        printTable(
+          ['Variant ID', 'SKU', 'Product', 'Location', 'Qty', 'Batch'],
+          items.map((i: any) => [
+            i.productVariantId ?? i.id ?? '-',
+            i.sku ?? '-',
+            i.productVariantName ?? '-',
+            i.location ?? '-',
+            i.qty ?? '-',
+            i.batchNo ?? '-',
+          ])
+        );
       } catch (err) {
         handleError(err);
       }

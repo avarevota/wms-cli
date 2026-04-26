@@ -64,7 +64,7 @@ Flags (each applies where the backend supports it):
 |---|---|
 | `--limit <n>` | Page size, max 50 |
 | `--page <n>` | Page number |
-| `--status <v>` | Filter by status (numeric code for adjustments — see KNOWLEDGE.md) |
+| `--status <v>` | Filter by status. For `adjustments` / `opnames`, accepts either numeric codes (`1`) or enum labels (`PENDING`, `WAITING_FOR_APPROVAL`, `DONE`, `CANCELED`). |
 | `--type <v>` | Adjustment type (1 = product) |
 | `--sku <v>` | Filter by SKU (where supported) |
 | `--location <v>` | Filter by location (where supported) |
@@ -113,6 +113,14 @@ wms adjustment create \
 wms adjustment save-products <adjustmentId> \
   --warehouse-id <id> \
   --items '[{"productVariantId":"…","originLocation":"BIN-A1","qty":12,"batchNumber":"…","expiredDate":"2026-12-31"}]'
+
+# Convenience: add a single line without writing JSON
+wms adjustment add-item <adjustmentId> \
+  --warehouse-id <id> --product-variant-id <id> --origin-location BIN-A1 --qty 12 \
+  [--batch-number B-001 --expired-date 2026-12-31 --inventory-status 1]
+
+# Discover what's currently in stock for the adjustment's warehouse
+wms adjustment products <adjustmentId>
 
 wms adjustment items <adjustmentId> [--limit 50 --page 1]
 wms adjustment update-item <itemId> --qty 10

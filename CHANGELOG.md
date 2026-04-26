@@ -6,6 +6,22 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-04-26
+
+### Added
+- `wms adjustment add-item <id>` — single-line convenience wrapper around
+  `save-products` (no JSON required).
+- `wms adjustment products <id>` — list product variants currently
+  available to adjust (wraps `GET /adjustments/:id/products`).
+- `--status` on `list adjustments` and `list opnames` now accepts
+  enum labels (case-insensitive: `PENDING`, `WAITING_FOR_APPROVAL`,
+  `DONE`, `CANCELED`) in addition to numeric codes.
+
+### Changed
+- `ResourceDef` gains an optional `flagTransforms` map so resources can
+  coerce CLI flag values before they're forwarded to the API.
+- Roadmap polish queue trimmed to reflect what's now shipped.
+
 ## [0.5.0] — 2026-04-26
 
 ### Added
@@ -78,7 +94,8 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 - GitHub Packages publishing config (`.npmrc`, `publishConfig`),
   ESLint config, distribution & knowledge docs.
 
-[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/avarevota/wms-cli/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/avarevota/wms-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/avarevota/wms-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/avarevota/wms-cli/compare/v0.2.0...v0.3.0

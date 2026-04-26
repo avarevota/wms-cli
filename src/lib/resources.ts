@@ -19,6 +19,11 @@ export interface ResourceDef {
   supportsGet?: boolean;
   // Update support. If present, `wms update <resource> <id>` is enabled.
   update?: UpdateDef;
+  // Optional per-flag value coercion before the value is passed to the API.
+  // Keyed by the same CLI flag name used in `listQuery`. Lets resources
+  // accept user-friendly labels (e.g. --status PENDING) and forward the
+  // numeric code the backend expects.
+  flagTransforms?: Record<string, (raw: string) => string>;
 }
 
 export interface UpdateFieldDef {
@@ -56,6 +61,23 @@ const adjustmentStatusLabel = (v: unknown): string => {
   const n = Number(v);
   return ADJUSTMENT_STATUS[n] ?? String(v);
 };
+
+// Build a transform that accepts a label (case-insensitive) and returns
+// the numeric code the backend uses. Falls back to the raw input so users
+// can still pass numeric values directly.
+function labelToCode(map: Record<number, string>): (raw: string) => string {
+  const lookup = new Map<string, string>();
+  for (const [code, label] of Object.entries(map)) {
+    lookup.set(label.toLowerCase(), code);
+  }
+  return (raw: string) => {
+    if (raw === undefined || raw === null) return raw;
+    const trimmed = String(raw).trim();
+    if (trimmed === '') return trimmed;
+    if (/^\d+$/.test(trimmed)) return trimmed;
+    return lookup.get(trimmed.toLowerCase()) ?? trimmed;
+  };
+}
 
 // Same numeric mapping as AdjustmentStatus, but kept separate so the two
 // domains can drift independently if/when the backend changes.
@@ -232,6 +254,9 @@ export const RESOURCES: ResourceDef[] = [
       limit: 'limit',
       page: 'page',
     },
+    flagTransforms: {
+      status: labelToCode(ADJUSTMENT_STATUS),
+    },
     listColumns: [
       { header: 'ID', pick: (i) => i.id },
       { header: 'Code', pick: (i) => i.code },
@@ -270,6 +295,9 @@ export const RESOURCES: ResourceDef[] = [
       to: 'endDate',
       limit: 'limit',
       page: 'page',
+    },
+    flagTransforms: {
+      status: labelToCode(OPNAME_STATUS),
     },
     listColumns: [
       { header: 'ID', pick: (i) => i.id },
@@ -345,8 +373,11 @@ export async function fetchList(
   const params = new URLSearchParams();
   if (resource.listQuery) {
     for (const [flag, apiKey] of Object.entries(resource.listQuery)) {
-      const val = flags[flag];
-      if (val !== undefined && val !== '') params.append(apiKey, String(val));
+      const raw = flags[flag];
+      if (raw === undefined || raw === '') continue;
+      const transform = resource.flagTransforms?.[flag];
+      const val = transform ? transform(String(raw)) : String(raw);
+      if (val !== '') params.append(apiKey, val);
     }
   }
   const qs = params.toString();
