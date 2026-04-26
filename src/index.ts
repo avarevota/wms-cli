@@ -10,6 +10,8 @@ import { registerInboundCommands } from './commands/inbound.js';
 import { registerPutAwayCommands } from './commands/put-away.js';
 import { registerOpnameCommands } from './commands/opname.js';
 import { registerLogsCommands } from './commands/logs.js';
+import { registerOutboundCommands } from './commands/outbound.js';
+import { registerPicklistCommands } from './commands/picklist.js';
 import { resourceNames } from './lib/resources.js';
 
 const program = new Command();
@@ -35,6 +37,8 @@ registerInboundCommands(program);
 registerPutAwayCommands(program);
 registerOpnameCommands(program);
 registerLogsCommands(program);
+registerOutboundCommands(program);
+registerPicklistCommands(program);
 
 program.addHelpText(
   'after',
@@ -64,6 +68,14 @@ Examples:
   wms opname approve <opnameId> --note "verified"
   wms logs activity --module INBOUND --from 2026-04-01 --to 2026-04-26
   wms logs webhooks --from 2026-04-01 --to 2026-04-26 --event 1
+  wms list outbounds --status PROCESS --limit 20
+  wms outbound update-status <orderId> --status READY_TO_SHIP --awb JNE1234
+  wms outbound bulk-set-picker --ids <id1>,<id2> --picker <userId> --status PROCESS
+  wms picklist generate --outbound-ids <id1>,<id2> --picker-count 2
+  wms picklist pick-away --picklist-id <id> --pick-item-id <id> --item-barcode 12345 \\
+                         --qty 1 --warehouse-id <id> --zone-code Z1 --area-code A1 \\
+                         --storage-code BIN-A1 --mobile-storage-code CART-1
+  wms picklist finish <picklistId>
   wms config set apiUrl https://wms.example.com
 `
 );

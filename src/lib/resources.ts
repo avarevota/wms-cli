@@ -93,6 +93,43 @@ const opnameStatusLabel = (v: unknown): string => {
   return OPNAME_STATUS[n] ?? String(v);
 };
 
+// Mirrors OutboundStatusEnum.
+export const OUTBOUND_STATUS: Record<number, string> = {
+  0: 'UNDEFINED',
+  1: 'HOLD',
+  2: 'PROCESS',
+  3: 'READY_TO_SHIP',
+  4: 'COMPLETE',
+  5: 'ERROR',
+  99: 'CANCELED',
+};
+const outboundStatusLabel = (v: unknown): string => {
+  if (v === null || v === undefined) return '-';
+  const n = Number(v);
+  return OUTBOUND_STATUS[n] ?? String(v);
+};
+
+// Mirrors PicklistStatusEnum.
+export const PICKLIST_STATUS: Record<number, string> = {
+  1: 'PENDING',
+  2: 'READY_TO_PICK',
+  3: 'PICK',
+  4: 'READY_TO_PACK',
+  5: 'PACK',
+  6: 'READY_TO_SHIP',
+  7: 'SHIP',
+  99: 'CANCELED',
+};
+const picklistStatusLabel = (v: unknown): string => {
+  if (v === null || v === undefined) return '-';
+  const n = Number(v);
+  return PICKLIST_STATUS[n] ?? String(v);
+};
+
+// Public-export the label-to-code helper so command files can build their
+// own labelled flags (e.g. `wms outbound update-status --status COMPLETE`).
+export { labelToCode };
+
 export const RESOURCES: ResourceDef[] = [
   {
     name: 'inbounds',
@@ -118,16 +155,17 @@ export const RESOURCES: ResourceDef[] = [
     aliases: ['outbound'],
     endpoint: '/outbounds',
     listQuery: { status: 'status', limit: 'limit', page: 'page' },
+    flagTransforms: { status: labelToCode(OUTBOUND_STATUS) },
     listColumns: [
       { header: 'ID', pick: (i) => i.id },
       { header: 'Reference', pick: (i) => i.reference ?? i.code },
-      { header: 'Status', pick: (i) => i.status },
+      { header: 'Status', pick: (i) => outboundStatusLabel(i.status) },
       { header: 'Date', pick: (i) => fmtDate(i.createdAt) },
     ],
     detailFields: [
       { label: 'ID', pick: (i) => i.id },
       { label: 'Reference', pick: (i) => i.reference ?? i.code },
-      { label: 'Status', pick: (i) => i.status },
+      { label: 'Status', pick: (i) => outboundStatusLabel(i.status) },
       { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
       { label: 'Items', pick: (i) => i.items?.length ?? i.itemCount ?? 0 },
     ],
@@ -321,6 +359,28 @@ export const RESOURCES: ResourceDef[] = [
       { label: 'Note', pick: (i) => i.note },
       { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
     ],
+  },
+  {
+    name: 'picklists',
+    aliases: ['picklist'],
+    endpoint: '/picklist',
+    supportsGet: false, // backend has /picklist/items?id=… and /picklist/item/:id
+    listQuery: {
+      status: 'status',
+      providerShippingType: 'providerShippingType',
+      limit: 'limit',
+      page: 'page',
+    },
+    flagTransforms: { status: labelToCode(PICKLIST_STATUS) },
+    listColumns: [
+      { header: 'ID', pick: (i) => i.id },
+      { header: 'Code', pick: (i) => i.code ?? i.picklistNumber },
+      { header: 'Status', pick: (i) => picklistStatusLabel(i.status) },
+      { header: 'Picker', pick: (i) => i.pickerName ?? i.picker ?? '-' },
+      { header: 'Items', pick: (i) => i.itemCount ?? i.items?.length ?? 0 },
+      { header: 'Created', pick: (i) => fmtDate(i.createdAt) },
+    ],
+    detailFields: [],
   },
   {
     name: 'movements',

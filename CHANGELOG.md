@@ -6,6 +6,35 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-04-26
+
+### Added (Outbound + Picklist — Phase 1 of pick/pack/ship)
+- `wms outbound` command group:
+  - `update-status <orderId> --status <n|label> [--awb] [--cancel-reason]`
+  - `cancel <orderId>`
+  - `bulk-update-status --ids <csv> --status <n|label>`
+  - `bulk-set-picker --ids <csv> --picker <id> --status <…>`
+  - `logs [--outbound-number]`
+- `wms picklist` command group covering the floor's picking flow:
+  - `items <id>`, `item <itemId>`
+  - `generate --outbound-ids <csv> [--picker-count] [--bulk]`
+  - `set-picker <picklistId>`, `bulk-set-picker --ids <csv>`
+  - `set-mobile-storage`, `set-packing-area`
+  - `pick-away` (records a single pick scan)
+  - `update-to-shipped <picklistId> --awb`
+  - `finish <picklistId>`
+  - `product-scan --sku`, `location-scan --location`
+- `picklists` resource for `wms list picklists` (label-aware `--status`).
+- Label-aware `--status` on `outbounds` + `picklists` (e.g. `--status PROCESS`,
+  `--status READY_TO_PICK`).
+- Outbound + picklist columns now show enum labels in default tables.
+- Public re-export of `labelToCode` from `lib/resources.ts` so command
+  files can build their own label-validated flags.
+
+### Notes
+- Pack and ship workflows planned for v0.7.0 (Phase 2).
+- Wave-pick deferred (Phase 3, optional).
+
 ## [0.5.1] — 2026-04-26
 
 ### Added
@@ -94,7 +123,8 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 - GitHub Packages publishing config (`.npmrc`, `publishConfig`),
   ESLint config, distribution & knowledge docs.
 
-[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/avarevota/wms-cli/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/avarevota/wms-cli/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/avarevota/wms-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/avarevota/wms-cli/compare/v0.3.0...v0.4.0

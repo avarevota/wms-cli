@@ -52,6 +52,19 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
       `CANCELED`); numeric values still pass through.
 - [x] `ResourceDef.flagTransforms` extension point.
 
+### Outbound + picklist (v0.6.0 — pick/pack/ship Phase 1)
+- [x] `wms outbound` group: `update-status`, `cancel`,
+      `bulk-update-status`, `bulk-set-picker`, `logs`.
+- [x] `wms picklist` group: `items`, `item`, `generate`, `set-picker`,
+      `bulk-set-picker`, `set-mobile-storage`, `set-packing-area`,
+      `pick-away`, `update-to-shipped`, `finish`, `product-scan`,
+      `location-scan`.
+- [x] `picklists` resource for list (no detail endpoint yet).
+- [x] Label-aware `--status` for `outbounds` (HOLD/PROCESS/READY_TO_SHIP/
+      COMPLETE/ERROR/CANCELED) and `picklists` (PENDING/READY_TO_PICK/
+      PICK/READY_TO_PACK/PACK/READY_TO_SHIP/SHIP/CANCELED).
+- [x] `labelToCode` re-exported for downstream command files.
+
 ### Distribution
 - [x] Tarball build via `tsup` → `dist/index.js`
 - [x] GitHub Packages publishing config (`.npmrc`, `publishConfig`)
@@ -61,11 +74,19 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
 
 Ranked by ops impact (highest first). Pick one before starting; don't queue work speculatively.
 
-### 1. Outbound pick / pack / ship
-**Why:** Customer-facing daily ops; the natural counterpart to the inbound flow.
-**Scope warning:** Larger surface than inbound — picklist generation, wave picks, pack confirmation, ship label, multiple status enums. Plan to split into sub-phases (pick first, then pack/ship).
+### 1. Pack + ship (pick/pack/ship Phase 2)
+**Why:** Completes the outbound flow that v0.6.0 started.
+**Backend surface to wrap:** `/packs` (create / pack-away / finish / list / adjust-quantity / pack-orders / pack-items / mobile-storages) and `/ship` (create / proof-of-delivery / completed / list / get).
+**CLI shape (sketch):**
+- `wms pack create / pack-away / finish / items <packId> / adjust-item <itemId>`
+- `wms ship create / proof-of-delivery <id> / completed <id>`
+- `packs` and `ships` resources for list/get; label-aware `--status`.
 
-### 2. Other follow-ups
+### 2. Wave-pick (optional Phase 3)
+**Why:** Advanced batch picking; lower priority than pack/ship since basic picking now works without it. Skip unless ops explicitly asks.
+**Backend surface:** `/wave-pick/*` (params, picker assignment, summary, picklist association). Larger surface than picklist itself.
+
+### 3. Other follow-ups
 
 - [ ] Label-aware `--status` on `movements` (needs the movement enum mapping).
 - [ ] Reuse the status-label mapper in a single helper if a third lifecycle resource lands.

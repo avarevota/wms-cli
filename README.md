@@ -46,7 +46,7 @@ wms logout                                  # clears token; apiUrl is preserved
 
 ### `wms list <resource>`
 
-Available resources: `inbounds`, `outbounds`, `stock`, `skus`, `locations`, `customers`, `movements`, `adjustments`, `opnames`. Singular and dashed aliases (`inbound`, `sku`, `product`, `adjustment`, `stock-opname`, …) also work.
+Available resources: `inbounds`, `outbounds`, `stock`, `skus`, `locations`, `customers`, `movements`, `adjustments`, `opnames`, `picklists`. Singular and dashed aliases (`inbound`, `sku`, `product`, `adjustment`, `stock-opname`, `picklist`, …) also work.
 
 ```bash
 wms list inbounds --status PENDING --limit 20
@@ -64,7 +64,7 @@ Flags (each applies where the backend supports it):
 |---|---|
 | `--limit <n>` | Page size, max 50 |
 | `--page <n>` | Page number |
-| `--status <v>` | Filter by status. For `adjustments` / `opnames`, accepts either numeric codes (`1`) or enum labels (`PENDING`, `WAITING_FOR_APPROVAL`, `DONE`, `CANCELED`). |
+| `--status <v>` | Filter by status. Accepts numeric codes or enum labels for: `adjustments` / `opnames` (`PENDING`, `WAITING_FOR_APPROVAL`, `DONE`, `CANCELED`); `outbounds` (`HOLD`, `PROCESS`, `READY_TO_SHIP`, `COMPLETE`, `ERROR`, `CANCELED`); `picklists` (`PENDING`, `READY_TO_PICK`, `PICK`, `READY_TO_PACK`, `PACK`, `READY_TO_SHIP`, `SHIP`, `CANCELED`). |
 | `--type <v>` | Adjustment type (1 = product) |
 | `--sku <v>` | Filter by SKU (where supported) |
 | `--location <v>` | Filter by location (where supported) |
@@ -192,6 +192,54 @@ wms logs sync-stocks --from 2026-04-01 --type 1 --keyword "out of stock"
 
 `logs webhooks` requires `--from` and `--to` (backend constraint). Use `--json` if you'd rather pipe the raw envelope into `jq`.
 
+### `wms outbound <action>`
+
+Outbound order management beyond list/get. Status flags accept labels (`PROCESS`, `READY_TO_SHIP`, `COMPLETE`, …) or numeric codes.
+
+```bash
+wms outbound update-status <orderId> --status READY_TO_SHIP --awb JNE1234
+wms outbound update-status <orderId> --status CANCELED --cancel-reason "Customer canceled"
+wms outbound cancel <orderId>
+wms outbound bulk-update-status --ids <id1>,<id2> --status COMPLETE
+wms outbound bulk-set-picker --ids <id1>,<id2> --picker <userId> --status PROCESS
+wms outbound logs --outbound-number <code>
+```
+
+`bulk-*` commands accept `--is-selected-all` to apply to every record matching the supplied filters (`--filter-status`, `--customer-id`).
+
+### `wms picklist <action>`
+
+Picklist lifecycle from generation through shipping. The flow is: **generate** → **set picker** → **set mobile-storage** → **pick-away** (per scan) → **finish** → **set packing-area** → **update-to-shipped**.
+
+```bash
+# Generate a picklist for selected outbound orders
+wms picklist generate --outbound-ids <id1>,<id2> --picker-count 2
+
+# List items + see a single item
+wms list picklists --status READY_TO_PICK
+wms picklist items <picklistId>
+wms picklist item <itemId>
+
+# Assign and route
+wms picklist set-picker <picklistId> --picker <userId>
+wms picklist set-mobile-storage <picklistId> --area-code CART-1
+wms picklist set-packing-area <picklistId> --area-code PACK-A
+
+# Floor scans
+wms picklist product-scan --sku <barcode>
+wms picklist location-scan --location BIN-A1
+
+# Per-item pick — one call per scan
+wms picklist pick-away \
+  --picklist-id <id> --pick-item-id <itemId> --item-barcode 12345 --qty 1 \
+  --warehouse-id <id> --zone-code Z1 --area-code A1 --storage-code BIN-A1 \
+  --mobile-storage-code CART-1
+
+# Lifecycle
+wms picklist finish <picklistId>
+wms picklist update-to-shipped <picklistId> --awb JNE1234
+```
+
 ### `wms put-away <action>`
 
 Inbound **partial put-away** workflow on `/inbound-puts`. The flow is: **create session** → **add items** (per location) → **finish** (commits stock). Multiple sessions can run for one inbound.
@@ -268,6 +316,8 @@ src/
     put-away.ts         # `wms put-away <action>` (partial put-away workflow)
     opname.ts           # `wms opname <action>` (cycle-count workflow)
     logs.ts             # `wms logs <kind>` (activity / webhooks / sync-stocks)
+    outbound.ts         # `wms outbound <action>` (order status, picker, logs)
+    picklist.ts         # `wms picklist <action>` (generate, pick, finish, ship)
   lib/
     client.ts           # fetch wrapper, envelope unwrap, 401/429 handling
     config.ts           # ~/.config/revota-wms store (chmod 600)

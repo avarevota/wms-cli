@@ -21,6 +21,7 @@ The CLI operates on these main resources:
 - **movements** - Internal stock transfers and adjustments
 - **adjustments** - Stock-adjustment work orders (cycle-count corrections, damage/loss). Has its own lifecycle: PENDING → WAITING_FOR_APPROVAL → DONE (or CANCELED)
 - **opnames** - Stock-opname (cycle counting) sessions. Same lifecycle as adjustments, but the inputs are physical counts at locations rather than discrepancy claims
+- **picklists** - Pick work orders generated from outbound orders. Lifecycle: PENDING → READY_TO_PICK → PICK → READY_TO_PACK → PACK → READY_TO_SHIP → SHIP (or CANCELED)
 
 ### Authentication
 
@@ -352,6 +353,48 @@ wms opname approve <opnameId> --note "verified by supervisor"
 `opname` differs from `adjustment` in two practical ways:
 - The count is location-driven (you walk a zone and record what's there), so the items list is grouped by location with `wms opname items <opnameId> --group`.
 - The session has a `name` (unique) so it's easier to coordinate multiple counters working different zones at the same time.
+
+### Picking and Shipping an Outbound Order (Phase 1)
+
+The outbound flow is multi-stage: **outbound order** (HOLD → PROCESS → READY_TO_SHIP → COMPLETE) → **picklist** (generated from one or more orders) → **pick** (per-scan, into a mobile-storage cart) → **pack** → **ship**.
+
+This release covers the order-management and pick portions; pack/ship will land in a follow-up.
+
+```bash
+# Find work and triage
+wms list outbounds --status PROCESS --limit 20
+wms outbound logs --outbound-number <code>
+
+# Status corrections + cancellation
+wms outbound update-status <orderId> --status READY_TO_SHIP --awb JNE1234
+wms outbound update-status <orderId> --status CANCELED --cancel-reason "Customer canceled"
+wms outbound cancel <orderId>
+
+# Bulk operations (e.g. same-day-cutoff release)
+wms outbound bulk-update-status --ids <id1>,<id2> --status COMPLETE
+wms outbound bulk-set-picker --ids <id1>,<id2> --picker <userId> --status PROCESS
+
+# Generate the pick work and assign it
+wms picklist generate --outbound-ids <id1>,<id2> --picker-count 2
+wms list picklists --status READY_TO_PICK
+wms picklist set-picker <picklistId> --picker <userId>
+wms picklist set-mobile-storage <picklistId> --area-code CART-1
+
+# Floor scans (mostly used by mobile UIs, exposed here for tooling/scripting)
+wms picklist product-scan --sku <barcode>
+wms picklist location-scan --location BIN-A1
+
+# Per-item pick — one call per scan/box
+wms picklist pick-away \
+  --picklist-id <id> --pick-item-id <itemId> --item-barcode 12345 --qty 1 \
+  --warehouse-id <id> --zone-code Z1 --area-code A1 --storage-code BIN-A1 \
+  --mobile-storage-code CART-1
+
+# Hand off the cart and (eventually) record AWB
+wms picklist set-packing-area <picklistId> --area-code PACK-A
+wms picklist finish <picklistId>
+wms picklist update-to-shipped <picklistId> --awb JNE1234
+```
 
 ### Inspecting Logs (activity / webhooks / sync-stocks)
 
