@@ -1,49 +1,72 @@
-# WMS CLI — Build Checklist
+# WMS CLI — Roadmap
 
-## Phase 1: Project Setup
-- [ ] Create `wms-cli/` directory structure (`src/commands/`, `src/lib/`)
-- [ ] Write `package.json` with bin entries (`wms`, `revota`), ESM, Node >= 20
-- [ ] Write `tsconfig.json` (ESM, strict, Node 20 types)
-- [ ] Install dependencies: `commander`, `conf`, `cli-table3`, `kleur`
-- [ ] Install dev dependencies: `typescript`, `tsup`, `tsx`, `@types/node`, `eslint`
+Status snapshot of the CLI: what's shipped, what's open, and what's next.
+For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md).
 
-## Phase 2: Core Library
-- [ ] Implement `src/lib/config.ts` — conf wrapper, chmod 600, schema { apiUrl, token, user }
-- [ ] Implement `src/lib/client.ts` — fetch wrapper, unwrap envelope, handle 401/429, verbose logging
-- [ ] Implement `src/lib/output.ts` — table formatter, JSON formatter, error printer
+## Shipped
 
-## Phase 3: Auth Commands
-- [ ] `wms login` — prompt email/password, POST /auth/login, store token
-- [ ] `wms logout` — clear config
-- [ ] `wms whoami` — POST /auth/token-validation, show user info
+### Foundations (v0.1.0)
+- [x] Project scaffold (`commander`, `conf`, `cli-table3`, `kleur`, `tsup`, ESM, Node ≥ 20)
+- [x] `src/lib/config.ts` — `~/.config/revota-wms/config.json` (chmod 600)
+- [x] `src/lib/client.ts` — fetch wrapper, response-envelope unwrap, 401 / 429 handling, `--verbose` redacting
+- [x] `src/lib/output.ts` — table / JSON / colored output
+- [x] Auth: `wms login`, `wms logout`, `wms whoami`
+- [x] Config: `wms config get / set`
+- [x] Resource registry (`src/lib/resources.ts`) — adding a read-only resource is a single object literal
 
-## Phase 4: Config Commands
-- [ ] `wms config get <key>` — read config value
-- [ ] `wms config set <key> <value>` — write config value
+### Read commands (v0.1.0)
+- [x] `wms list <resource>` for inbounds / outbounds / stock / skus / locations / customers / movements
+- [x] `wms get <resource> <id>` for the same set (except `stock` — no detail endpoint)
+- [x] Shared filter flags (`--status`, `--sku`, `--location`, `--zone`, `--area`, `--from`, `--to`, `--limit`, `--page`, plus `--type`, `--customer-id`, `--brand-id`, `--warehouse-id`, `--assigned`)
 
-## Phase 5: Read Commands (v1)
-- [ ] `wms stock list [--sku] [--location]` — GET /stock
-- [ ] `wms sku list` — GET /products
-- [ ] `wms sku get <code>` — GET /products/:code
-- [ ] `wms inbound list` — GET /inbounds
-- [ ] `wms inbound get <id>` — GET /inbounds/:id
-- [ ] `wms outbound list` — GET /outbounds
-- [ ] `wms outbound get <id>` — GET /outbounds/:id
-- [ ] `wms location list` — GET /location
+### Update support (v0.2.0)
+- [x] `wms update sku <variantId>` — `PUT /products/:id` with per-field flags + `--data` JSON passthrough
+- [x] `ResourceDef.update` block so other resources can opt in
 
-## Phase 6: CLI Entry Point
-- [ ] `src/index.ts` — commander setup, global flags (--json, --api-url, --verbose), command registration
+### Stock adjustments (v0.3.0)
+- [x] `adjustments` resource for `list` / `get`
+- [x] `wms adjustment` group: `create`, `save-products`, `items`, `update-item`, `cancel-item`, `cancel`, `finish`, `approve`
+- [x] Numeric-enum status label helper
 
-## Phase 7: Build & Verify
-- [ ] Run `npm run build` (tsup → single-file bin)
-- [ ] `npm link` or test with `node dist/index.js`
-- [ ] Verify `wms login` against local backend (port 3030)
-- [ ] Verify token persists in `~/.config/revota-wms/config.json` with mode 600
-- [ ] Verify `wms stock list` returns table, `--json` returns raw data
-- [ ] Verify invalid token → friendly "Session expired" message
-- [ ] Verify 429 rate-limit handling (friendly message, no stack trace)
+### Distribution
+- [x] Tarball build via `tsup` → `dist/index.js`
+- [x] GitHub Packages publishing config (`.npmrc`, `publishConfig`)
+- [ ] Migrate publish to public/private **npm registry** (in progress — outside CLI itself)
 
-## Phase 8: Polish
-- [ ] Add `.gitignore` (node_modules, dist, .env)
-- [ ] Verify `npm run lint` and `npm run typecheck` pass
-- [ ] Update root `AGENTS.md` with `wms-cli/` entry
+## Up next
+
+Ranked by ops impact (highest first). Pick one before starting; don't queue work speculatively.
+
+### 1. Inbound receive workflow
+**Why:** Highest-frequency floor operation. Currently we only read inbounds.
+**Backend surface to wrap:** `POST /inbounds`, line-item add, receive endpoints, accept/reject (`InboundPutStatus`).
+**CLI shape (sketch):**
+- `wms inbound create --customer-id … --warehouse-id … --reference …`
+- `wms inbound receive <id> --items '[…]'`
+- `wms inbound accept <itemId>` / `wms inbound reject <itemId> --reason …`
+
+### 2. Stock opname (cycle counting)
+**Why:** Pairs with adjustment; the read-only piece of the stock-control story.
+**Backend surface to wrap:** `/stock-opname` controller — session create / add items / submit / approve.
+**CLI shape (sketch):** mirror `wms adjustment` — `create / save-products / items / finish / approve / cancel`.
+
+### 3. Outbound pick / pack / ship
+**Why:** Customer-facing daily ops.
+**Scope warning:** Larger surface than inbound — picklist generation, wave picks, pack confirmation, ship label, multiple status enums. Consider splitting into sub-phases.
+
+### 4. Polish
+
+- [ ] `--status PENDING` (label) in addition to `--status 1` (numeric) on adjustments / movements / opname.
+- [ ] `wms adjustment add-item <adjId>` convenience subcommand for single-line additions (no JSON).
+- [ ] `wms list adjustments --customer-id` / `--brand-id` autocomplete from local cache (later).
+- [ ] Restore `npm run lint` — `@typescript-eslint/*` deps were referenced by `eslint.config.js` but aren't installed.
+
+## Out of scope (for now)
+
+- Interactive UIs / TUIs.
+- Bulk import wrappers (the backend already exposes XLSX endpoints for these; the CLI doesn't try to replicate the spreadsheets).
+- Per-environment config profiles. Single active config is sufficient for current users.
+
+## Versioning
+
+Pre-1.0: minor for new commands/features (e.g. 0.2 → 0.3 added `update`, 0.3 → 0.4 will add the next feature), patch for bug fixes. Bump in the same commit as the feature so it's traceable.

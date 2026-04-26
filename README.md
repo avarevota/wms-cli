@@ -46,7 +46,7 @@ wms logout                                  # clears token; apiUrl is preserved
 
 ### `wms list <resource>`
 
-Available resources: `inbounds`, `outbounds`, `stock`, `skus`, `locations`, `customers`, `movements`. Singular aliases (`inbound`, `sku`, `product`, …) also work.
+Available resources: `inbounds`, `outbounds`, `stock`, `skus`, `locations`, `customers`, `movements`, `adjustments`. Singular aliases (`inbound`, `sku`, `product`, `adjustment`, …) also work.
 
 ```bash
 wms list inbounds --status PENDING --limit 20
@@ -55,6 +55,7 @@ wms list stock                              # paginated; --json for full shape
 wms list skus
 wms list locations --zone A
 wms list movements --from 2026-04-01 --to 2026-04-22
+wms list adjustments --status 1 --warehouse-id <id> --from 2026-04-01
 ```
 
 Flags (each applies where the backend supports it):
@@ -63,11 +64,14 @@ Flags (each applies where the backend supports it):
 |---|---|
 | `--limit <n>` | Page size, max 50 |
 | `--page <n>` | Page number |
-| `--status <v>` | Filter by status (inbounds / outbounds / movements) |
+| `--status <v>` | Filter by status (numeric code for adjustments — see KNOWLEDGE.md) |
+| `--type <v>` | Adjustment type (1 = product) |
 | `--sku <v>` | Filter by SKU (where supported) |
 | `--location <v>` | Filter by location (where supported) |
 | `--zone <v>` / `--area <v>` | Locations |
-| `--from <date>` / `--to <date>` | Movements |
+| `--from <date>` / `--to <date>` | Date ranges (movements, adjustments) |
+| `--customer-id <id>` / `--brand-id <id>` / `--warehouse-id <id>` | Adjustments / scoped resources |
+| `--assigned <id>` | Adjustments — filter by assignee |
 | `--json` | Raw JSON output (unwrapped `data`) |
 
 ### `wms get <resource> <id>`
@@ -79,9 +83,46 @@ wms get sku <id>
 wms get location <id>
 wms get customer <id>
 wms get movement <id>
+wms get adjustment <id>
 ```
 
 `wms get stock <id>` is not supported — the backend has no stock detail endpoint. Use `wms list stock` instead.
+
+### `wms update <resource> <id>`
+
+Updates products / variants via `PUT /products/:id` (the `id` is a **product variant id**). Pass any subset of flags, or hand it a full payload via `--data '<json>'`.
+
+```bash
+wms update sku <variantId> --name "New Name" --price 19900
+wms update sku <variantId> --sku NEW-001 --sku-external EXT-001 --cogs 12000
+wms update sku <variantId> --attributes '[{"name":"color","value":"red"}]'
+wms update sku <variantId> --data '{"name":"…","sku":"…","skuExternal":"…","brandId":"…","categoryId":"…","method":1}'
+```
+
+Available fields: `--name`, `--sku`, `--sku-external`, `--msku`, `--brand-id`, `--category-id`, `--customer-id`, `--cogs`, `--price`, `--method`, `--note`, `--attributes` (JSON array), `--dimension` (JSON object). The backend marks `brandId`/`categoryId`/`name`/`sku`/`skuExternal` as required — for partial edits, fetch the record first or use `--data`.
+
+### `wms adjustment <action>`
+
+Stock-adjustment lifecycle. The flow is: **create** → **save-products** → (review/`update-item`/`cancel-item`) → **finish** → **approve**.
+
+```bash
+wms adjustment create \
+  --warehouse-id <id> --assigned-to <userId> --due-date 2026-05-01 \
+  [--customer-id <id>] [--brand-id <id>] [--note "monthly cycle count"]
+
+wms adjustment save-products <adjustmentId> \
+  --warehouse-id <id> \
+  --items '[{"productVariantId":"…","originLocation":"BIN-A1","qty":12,"batchNumber":"…","expiredDate":"2026-12-31"}]'
+
+wms adjustment items <adjustmentId> [--limit 50 --page 1]
+wms adjustment update-item <itemId> --qty 10
+wms adjustment cancel-item <itemId>
+wms adjustment cancel <adjustmentId>           # cancel the whole adjustment
+wms adjustment finish <adjustmentId>           # PENDING → WAITING_FOR_APPROVAL
+wms adjustment approve <adjustmentId> --note "approved after spot check"
+```
+
+`finish` and `approve` return `{ succeed, failed, errors[] }` — the CLI prints both counts and any per-item errors. See [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md) for status codes.
 
 ### Global flags
 
@@ -127,6 +168,8 @@ src/
     config.ts           # config get/set
     list.ts             # `wms list <resource>` dispatcher
     get.ts              # `wms get <resource> <id>` dispatcher
+    update.ts           # `wms update <resource> <id>` dispatcher
+    adjustment.ts       # `wms adjustment <action>` workflow group
   lib/
     client.ts           # fetch wrapper, envelope unwrap, 401/429 handling
     config.ts           # ~/.config/revota-wms store (chmod 600)
@@ -135,7 +178,11 @@ src/
     errors.ts           # shared error printer
 ```
 
-Adding a new resource: append a `ResourceDef` entry in `src/lib/resources.ts` — no new command files needed.
+Adding a new **read-only** resource: append a `ResourceDef` entry in `src/lib/resources.ts` — no new command files needed.
+
+Adding **update support** to a resource: set the `update` block on its `ResourceDef` (method, fields, optional `pathFor`). The shared `wms update` dispatcher will pick up the flags automatically.
+
+Adding a **new workflow** (multi-action lifecycle, e.g. adjustment / opname): create a dedicated command group in `src/commands/<name>.ts` and register it from `src/index.ts`. The resource registry handles list/get; the command file owns custom actions.
 
 ## Operations Guide
 

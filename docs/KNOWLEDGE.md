@@ -19,6 +19,7 @@ The CLI operates on these main resources:
 - **locations** - Warehouse locations (zones, areas, storage bins)
 - **customers** - Customer accounts managed in the system
 - **movements** - Internal stock transfers and adjustments
+- **adjustments** - Stock-adjustment work orders (cycle-count corrections, damage/loss). Has its own lifecycle: PENDING → WAITING_FOR_APPROVAL → DONE (or CANCELED)
 
 ### Authentication
 
@@ -280,6 +281,40 @@ wms list movements --status 1 --limit 10
 # View movement history
 wms list movements --from 2026-01-01 --to 2026-04-22
 ```
+
+### Running a Stock Adjustment (cycle-count correction)
+
+Adjustments are work orders that record discrepancies between system stock and physical stock. The lifecycle is enforced by the backend — items can only be edited while the adjustment is `PENDING`, and stock is only written to ledgers on `approve`.
+
+```bash
+# 1. Create the work order (status = 1 PENDING)
+wms adjustment create \
+  --warehouse-id <id> --assigned-to <userId> --due-date 2026-05-01 \
+  --note "Q2 cycle count, zone A"
+
+# 2. Add the counted items (one call, JSON array)
+wms adjustment save-products <adjustmentId> \
+  --warehouse-id <id> \
+  --items '[{"productVariantId":"<id>","originLocation":"A1-01","qty":12}]'
+# `qty` here is the COUNTED quantity. The backend computes
+# adjustQuantity = newAvailableQuantity - availableQuantity.
+
+# 3. Review what's queued (and fix lines if needed)
+wms adjustment items <adjustmentId>
+wms adjustment update-item <itemId> --qty 13
+wms adjustment cancel-item <itemId>
+
+# 4. Submit for approval (1 → 2 WAITING_FOR_APPROVAL)
+wms adjustment finish <adjustmentId>
+
+# 5. Approve — applies stock changes (2 → 3 DONE)
+wms adjustment approve <adjustmentId> --note "verified by supervisor"
+
+# Abort at any point before approve:
+wms adjustment cancel <adjustmentId>
+```
+
+`finish` and `approve` return `{ succeed, failed, errors[] }`. A non-zero `failed` count means some items couldn't be applied (e.g. stock no longer in the origin location). Inspect the printed errors and resolve them before re-running.
 
 ## Data Relationships
 
