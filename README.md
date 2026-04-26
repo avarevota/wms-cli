@@ -124,6 +124,45 @@ wms adjustment approve <adjustmentId> --note "approved after spot check"
 
 `finish` and `approve` return `{ succeed, failed, errors[] }` — the CLI prints both counts and any per-item errors. See [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md) for status codes.
 
+### `wms inbound <action>`
+
+Manage inbound work orders beyond list/get.
+
+```bash
+wms inbound orders <inboundId> [--limit 50 --page 1]
+wms inbound update-order <orderId> --expected-quantity 12 --batch-number B-001 --expired-date 2026-12-31
+wms inbound finish <inboundId>
+wms inbound cancel <inboundId>
+```
+
+`update-order` is partial — pass any subset of `--expected-quantity`, `--batch-number`, `--expired-date`.
+
+### `wms put-away <action>`
+
+Inbound **partial put-away** workflow on `/inbound-puts`. The flow is: **create session** → **add items** (per location) → **finish** (commits stock). Multiple sessions can run for one inbound.
+
+```bash
+# 1. Create a put-away session covering selected order line(s)
+wms put-away create --inbound-id <inboundId> --order-ids <orderId1>,<orderId2>
+
+# 2. Add a counted item, mapping it to a destination location
+wms put-away add-item <putAwayId> \
+  --inbound-order-id <orderId> --warehouse-id <id> \
+  --zone-code Z1 --area-code A1 --storage-code BIN-A1 \
+  --accepted 10 --rejected 0
+
+# 3. Inspect / fix items
+wms put-away detail <putAwayId>
+wms put-away update-item <putAwayId> <itemId> \
+  --warehouse-id <id> --zone-code Z1 --area-code A1 --storage-code BIN-A2 --accepted 8
+wms put-away delete-item <putAwayId> <itemId>
+
+# 4. List sessions for an inbound, finish or cancel
+wms put-away list <inboundId>
+wms put-away finish <putAwayId>          # commits stock to locations
+wms put-away cancel <putAwayId>
+```
+
 ### Global flags
 
 | Flag | Purpose |
@@ -170,6 +209,8 @@ src/
     get.ts              # `wms get <resource> <id>` dispatcher
     update.ts           # `wms update <resource> <id>` dispatcher
     adjustment.ts       # `wms adjustment <action>` workflow group
+    inbound.ts          # `wms inbound <action>` (orders, update-order, finish, cancel)
+    put-away.ts         # `wms put-away <action>` (partial put-away workflow)
   lib/
     client.ts           # fetch wrapper, envelope unwrap, 401/429 handling
     config.ts           # ~/.config/revota-wms store (chmod 600)

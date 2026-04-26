@@ -6,6 +6,8 @@ import { registerListCommand } from './commands/list.js';
 import { registerGetCommand } from './commands/get.js';
 import { registerUpdateCommand } from './commands/update.js';
 import { registerAdjustmentCommands } from './commands/adjustment.js';
+import { registerInboundCommands } from './commands/inbound.js';
+import { registerPutAwayCommands } from './commands/put-away.js';
 import { resourceNames } from './lib/resources.js';
 
 const program = new Command();
@@ -27,6 +29,8 @@ registerListCommand(program);
 registerGetCommand(program);
 registerUpdateCommand(program);
 registerAdjustmentCommands(program);
+registerInboundCommands(program);
+registerPutAwayCommands(program);
 
 program.addHelpText(
   'after',
@@ -45,6 +49,12 @@ Examples:
   wms adjustment create --warehouse-id <id> --assigned-to <userId> --due-date 2026-05-01
   wms adjustment finish <adjustmentId>
   wms adjustment approve <adjustmentId> --note "approved after spot check"
+  wms inbound orders <inboundId>
+  wms inbound update-order <orderId> --expected-quantity 12 --batch-number B-001
+  wms put-away create --inbound-id <id> --order-ids <id1>,<id2>
+  wms put-away add-item <putAwayId> --inbound-order-id <id> --warehouse-id <id> \\
+                       --zone-code Z1 --area-code A1 --storage-code BIN-A1 --accepted 10
+  wms put-away finish <putAwayId>
   wms config set apiUrl https://wms.example.com
 `
 );

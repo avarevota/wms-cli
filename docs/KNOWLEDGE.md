@@ -255,7 +255,41 @@ wms list stock --limit 20
 wms list skus --limit 10
 ```
 
-### Processing Inbound Shipments
+### Receiving an Inbound (Partial Put-Away)
+
+The inbound flow is two-phase: the **inbound** order is created (typically via XLSX import or integration), then receivers run one or more **put-away sessions** to commit physical stock to bin locations. The CLI wraps the partial put-away controller (`/inbound-puts`).
+
+```bash
+# 1. Find the inbound and inspect its line items
+wms list inbounds --status 1 --limit 20
+wms inbound orders <inboundId>
+
+# 2. Open a put-away session for the lines you'll receive now
+wms put-away create --inbound-id <inboundId> --order-ids <orderId1>,<orderId2>
+
+# 3. For each counted box, record the destination + accepted/rejected qty
+wms put-away add-item <putAwayId> \
+  --inbound-order-id <orderId> --warehouse-id <id> \
+  --zone-code Z1 --area-code A1 --storage-code BIN-A1 \
+  --accepted 10 --rejected 0
+
+# 4. Verify, then finish (commits stock; status PENDING → COMPLETE)
+wms put-away detail <putAwayId>
+wms put-away finish <putAwayId>
+
+# 5. Once all session(s) for an inbound are committed, close the inbound
+wms inbound finish <inboundId>
+```
+
+Use `wms put-away cancel <putAwayId>` to abort a session before finishing. `wms inbound cancel <inboundId>` cancels the whole inbound (only valid if no put-aways are committed).
+
+`update-order` lets receivers correct line-item details (qty / batch / expiry) before put-away:
+
+```bash
+wms inbound update-order <orderId> --expected-quantity 12 --batch-number B-001 --expired-date 2026-12-31
+```
+
+### Processing Inbound Shipments (read-only)
 ```bash
 # List pending inbounds
 wms list inbounds --status 1 --limit 10

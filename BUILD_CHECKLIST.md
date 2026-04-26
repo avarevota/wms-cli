@@ -28,6 +28,14 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
 - [x] `wms adjustment` group: `create`, `save-products`, `items`, `update-item`, `cancel-item`, `cancel`, `finish`, `approve`
 - [x] Numeric-enum status label helper
 
+### Inbound + put-away (v0.4.0)
+- [x] `wms inbound` group: `orders`, `update-order`, `finish`, `cancel`
+- [x] `wms put-away` group covering `/inbound-puts` partial flow:
+      `list`, `detail`, `create`, `add-item`, `update-item`, `delete-item`,
+      `finish`, `cancel` (`putaway` alias)
+- [x] Status label helper for `InboundPutAwayStatusEnum`
+- [x] CHANGELOG.md introduced (Keep a Changelog format)
+
 ### Distribution
 - [x] Tarball build via `tsup` → `dist/index.js`
 - [x] GitHub Packages publishing config (`.npmrc`, `publishConfig`)
@@ -37,24 +45,16 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
 
 Ranked by ops impact (highest first). Pick one before starting; don't queue work speculatively.
 
-### 1. Inbound receive workflow
-**Why:** Highest-frequency floor operation. Currently we only read inbounds.
-**Backend surface to wrap:** `POST /inbounds`, line-item add, receive endpoints, accept/reject (`InboundPutStatus`).
-**CLI shape (sketch):**
-- `wms inbound create --customer-id … --warehouse-id … --reference …`
-- `wms inbound receive <id> --items '[…]'`
-- `wms inbound accept <itemId>` / `wms inbound reject <itemId> --reason …`
-
-### 2. Stock opname (cycle counting)
+### 1. Stock opname (cycle counting)
 **Why:** Pairs with adjustment; the read-only piece of the stock-control story.
 **Backend surface to wrap:** `/stock-opname` controller — session create / add items / submit / approve.
 **CLI shape (sketch):** mirror `wms adjustment` — `create / save-products / items / finish / approve / cancel`.
 
-### 3. Outbound pick / pack / ship
-**Why:** Customer-facing daily ops.
-**Scope warning:** Larger surface than inbound — picklist generation, wave picks, pack confirmation, ship label, multiple status enums. Consider splitting into sub-phases.
+### 2. Outbound pick / pack / ship
+**Why:** Customer-facing daily ops; the natural counterpart to the inbound flow we just shipped.
+**Scope warning:** Larger surface than inbound — picklist generation, wave picks, pack confirmation, ship label, multiple status enums. Consider splitting into sub-phases (pick first, then pack/ship).
 
-### 4. Polish
+### 3. Polish
 
 - [ ] `--status PENDING` (label) in addition to `--status 1` (numeric) on adjustments / movements / opname.
 - [ ] `wms adjustment add-item <adjId>` convenience subcommand for single-line additions (no JSON).
@@ -69,4 +69,4 @@ Ranked by ops impact (highest first). Pick one before starting; don't queue work
 
 ## Versioning
 
-Pre-1.0: minor for new commands/features (e.g. 0.2 → 0.3 added `update`, 0.3 → 0.4 will add the next feature), patch for bug fixes. Bump in the same commit as the feature so it's traceable.
+Pre-1.0: minor for new commands/features (0.2 → 0.3 added `update`; 0.3 → 0.4 added `inbound` + `put-away`), patch for bug fixes. Bump in the same commit as the feature so it's traceable. Maintain `CHANGELOG.md` alongside the version bump.
