@@ -6,6 +6,30 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-04-26
+
+### Removed
+- `wms picklist bulk-set-picker` — was POSTing a wave-pick-shaped payload
+  to `/picklist/set-picker` (single-record endpoint). The actual bulk
+  endpoint is `/wave-pick/bulk-set-picker` and will return as
+  `wms wave-pick bulk-set-picker` when wave-pick lands.
+
+### Changed
+- `--status` on `list movements` now accepts enum labels (`PENDING`,
+  `WAITING_FOR_APPROVAL`, `DONE`, `CANCELED`) in addition to numeric
+  codes; default columns show the label.
+- `movements` listQuery aligned with backend MovementQuery: `--status`
+  → `movementStatus`, `--type` → `movementType`, `--from`/`--to` →
+  `startDate`/`endDate`, plus `--customer-id`/`--brand-id`/
+  `--warehouse-id`. Removes the bogus `--sku` filter the backend never
+  honored.
+- Extracted `splitCsv` / `parseJsonArray` / `parseNumberFlag` helpers
+  into `src/lib/flags.ts`; collapses ~5 duplicates.
+
+### Fixed
+- `npm run lint` now works — installed missing `@typescript-eslint/*`
+  dev-deps. Codebase is clean against `tseslint.configs.recommended`.
+
 ## [0.7.0] — 2026-04-26
 
 ### Added (Pack + Ship — Phase 2 of pick/pack/ship)
@@ -147,7 +171,8 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 - GitHub Packages publishing config (`.npmrc`, `publishConfig`),
   ESLint config, distribution & knowledge docs.
 
-[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/avarevota/wms-cli/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/avarevota/wms-cli/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/avarevota/wms-cli/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/avarevota/wms-cli/compare/v0.5.0...v0.5.1

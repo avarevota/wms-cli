@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { apiRequest } from '../lib/client.js';
 import { extractItems } from '../lib/resources.js';
+import { parseJsonArray } from '../lib/flags.js';
 import { printError, printJson, printSuccess, printTable } from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
 
@@ -56,22 +57,6 @@ interface ItemsListOptions {
   limit?: string;
   page?: string;
   json?: boolean;
-}
-
-function parseJsonArray(raw: string, flag: string): unknown[] {
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      throw new Error(`${flag} must be a JSON array`);
-    }
-    return parsed;
-  } catch (err) {
-    throw new Error(
-      `${flag} must be valid JSON array. Parse error: ${
-        err instanceof Error ? err.message : String(err)
-      }`
-    );
-  }
 }
 
 function printDetail(

@@ -64,7 +64,7 @@ Flags (each applies where the backend supports it):
 |---|---|
 | `--limit <n>` | Page size, max 50 |
 | `--page <n>` | Page number |
-| `--status <v>` | Filter by status. Accepts numeric codes or enum labels for: `adjustments` / `opnames` (`PENDING`, `WAITING_FOR_APPROVAL`, `DONE`, `CANCELED`); `outbounds` (`HOLD`, `PROCESS`, `READY_TO_SHIP`, `COMPLETE`, `ERROR`, `CANCELED`); `picklists` (`PENDING`, `READY_TO_PICK`, `PICK`, `READY_TO_PACK`, `PACK`, `READY_TO_SHIP`, `SHIP`, `CANCELED`); `packs` (`PENDING`, `INPROGRESS`, `DONE`); `ships` (`READY_TO_SHIP`, `SHIPPED`). |
+| `--status <v>` | Filter by status. Accepts numeric codes or enum labels for: `adjustments` / `opnames` / `movements` (`PENDING`, `WAITING_FOR_APPROVAL`, `DONE`, `CANCELED`); `outbounds` (`HOLD`, `PROCESS`, `READY_TO_SHIP`, `COMPLETE`, `ERROR`, `CANCELED`); `picklists` (`PENDING`, `READY_TO_PICK`, `PICK`, `READY_TO_PACK`, `PACK`, `READY_TO_SHIP`, `SHIP`, `CANCELED`); `packs` (`PENDING`, `INPROGRESS`, `DONE`); `ships` (`READY_TO_SHIP`, `SHIPPED`). |
 | `--type <v>` | Adjustment type (1 = product) |
 | `--sku <v>` | Filter by SKU (where supported) |
 | `--location <v>` | Filter by location (where supported) |

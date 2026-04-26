@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { apiRequest } from '../lib/client.js';
 import { extractItems } from '../lib/resources.js';
+import { splitCsv } from '../lib/flags.js';
 import { printError, printJson, printSuccess, printTable } from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
 
@@ -27,14 +28,6 @@ interface SetAreaOptions {
 
 interface SetPickerOptions {
   picker: string;
-  json?: boolean;
-}
-
-interface BulkSetPickerOptions {
-  ids: string;
-  picker: string;
-  isSelectedAll?: boolean;
-  wavePickNumber?: string;
   json?: boolean;
 }
 
@@ -66,13 +59,6 @@ interface LocationScanOptions {
   limit?: string;
   page?: string;
   json?: boolean;
-}
-
-function splitCsv(value: string): string[] {
-  return value
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
 }
 
 export function registerPicklistCommands(program: Command): void {
@@ -207,40 +193,6 @@ export function registerPicklistCommands(program: Command): void {
           return;
         }
         printSuccess(`Assigned picker ${options.picker} to picklist ${picklistId}`);
-      } catch (err) {
-        handleError(err);
-      }
-    });
-
-  group
-    .command('bulk-set-picker')
-    .description('Assign a picker to many picklists (or to a wave)')
-    .requiredOption('--ids <csv>', 'Comma-separated picklist ids')
-    .requiredOption('--picker <id>', 'Picker user id')
-    .option('--is-selected-all', 'Apply to ALL records matching filters', false)
-    .option('--wave-pick-number <code>', 'Wave-pick number to associate')
-    .option('--json', 'Output raw JSON')
-    .action(async (options: BulkSetPickerOptions) => {
-      try {
-        const picklistIds = splitCsv(options.ids);
-        if (picklistIds.length === 0 && !options.isSelectedAll) {
-          printError('--ids must contain at least one picklist id (or pass --is-selected-all)');
-          process.exit(1);
-        }
-        const result = await apiRequest<any>('/picklist/set-picker', {
-          method: 'POST',
-          body: {
-            picklistIds,
-            picker: options.picker,
-            isSelectedAll: !!options.isSelectedAll,
-            wavePickNumber: options.wavePickNumber ?? '',
-          },
-        });
-        if (options.json) {
-          printJson(result);
-          return;
-        }
-        printSuccess(`Assigned picker ${options.picker} to ${picklistIds.length || 'all matching'} picklist(s)`);
       } catch (err) {
         handleError(err);
       }

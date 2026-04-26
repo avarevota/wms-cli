@@ -149,6 +149,19 @@ const shipStatusLabel = (v: unknown): string => {
   return SHIP_STATUS[n] ?? String(v);
 };
 
+// Mirrors MovementStatusEnum — same numeric codes as Adjustment / Opname.
+export const MOVEMENT_STATUS: Record<number, string> = {
+  1: 'PENDING',
+  2: 'WAITING_FOR_APPROVAL',
+  3: 'DONE',
+  99: 'CANCELED',
+};
+const movementStatusLabel = (v: unknown): string => {
+  if (v === null || v === undefined) return '-';
+  const n = Number(v);
+  return MOVEMENT_STATUS[n] ?? String(v);
+};
+
 // Public-export the label-to-code helper so command files can build their
 // own labelled flags (e.g. `wms outbound update-status --status COMPLETE`).
 export { labelToCode };
@@ -467,17 +480,35 @@ export const RESOURCES: ResourceDef[] = [
     name: 'movements',
     aliases: ['movement'],
     endpoint: '/movements',
-    listQuery: { sku: 'sku', from: 'from', to: 'to', limit: 'limit', page: 'page' },
+    // Backend MovementQuery uses movementStatus / movementType / startDate /
+    // endDate plus customerId / brandId / warehouseId scope filters.
+    listQuery: {
+      status: 'movementStatus',
+      type: 'movementType',
+      customerId: 'customerId',
+      brandId: 'brandId',
+      warehouseId: 'warehouseId',
+      from: 'startDate',
+      to: 'endDate',
+      limit: 'limit',
+      page: 'page',
+    },
+    flagTransforms: { status: labelToCode(MOVEMENT_STATUS) },
     listColumns: [
       { header: 'ID', pick: (i) => i.id },
+      { header: 'Code', pick: (i) => i.code ?? i.reference ?? '-' },
       { header: 'Type', pick: (i) => i.type },
-      { header: 'Status', pick: (i) => i.status },
+      { header: 'Status', pick: (i) => movementStatusLabel(i.status) },
       { header: 'Date', pick: (i) => fmtDate(i.createdAt) },
     ],
     detailFields: [
       { label: 'ID', pick: (i) => i.id },
+      { label: 'Code', pick: (i) => i.code ?? i.reference },
       { label: 'Type', pick: (i) => i.type },
-      { label: 'Status', pick: (i) => i.status },
+      { label: 'Status', pick: (i) => movementStatusLabel(i.status) },
+      { label: 'Warehouse', pick: (i) => i.warehouseName ?? i.warehouseId },
+      { label: 'Customer', pick: (i) => i.customerName ?? i.customerId },
+      { label: 'Brand', pick: (i) => i.brandName ?? i.brandId },
       { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
     ],
   },

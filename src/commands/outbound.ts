@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { apiRequest } from '../lib/client.js';
 import { OUTBOUND_STATUS, extractItems, labelToCode } from '../lib/resources.js';
+import { splitCsv } from '../lib/flags.js';
 import { printError, printJson, printSuccess, printTable } from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
 
@@ -52,13 +53,6 @@ function parseStatus(raw: string): number {
     );
   }
   return n;
-}
-
-function splitCsv(value: string): string[] {
-  return value
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
 }
 
 export function registerOutboundCommands(program: Command): void {

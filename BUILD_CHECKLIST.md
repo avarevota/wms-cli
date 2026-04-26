@@ -75,6 +75,16 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
 - [x] Label-aware `--status` for `packs` (PENDING/INPROGRESS/DONE) and
       `ships` (READY_TO_SHIP/SHIPPED).
 
+### Polish + bug fix (v0.7.1)
+- [x] Label-aware `--status` for `movements`; aligned `listQuery` with
+      the backend (`movementStatus`/`movementType`/`startDate`/`endDate`,
+      plus `customerId`/`brandId`/`warehouseId`).
+- [x] Restored `npm run lint` (installed `@typescript-eslint/*`).
+- [x] Removed broken `wms picklist bulk-set-picker` (wrong endpoint).
+      Will return as `wms wave-pick bulk-set-picker` when wave-pick lands.
+- [x] Extracted `splitCsv` / `parseJsonArray` / `parseNumberFlag` into
+      `src/lib/flags.ts`; collapsed ~5 duplicates.
+
 ### Distribution
 - [x] Tarball build via `tsup` → `dist/index.js`
 - [x] GitHub Packages publishing config (`.npmrc`, `publishConfig`)
@@ -94,9 +104,9 @@ Ranked by ops impact (highest first). Pick one before starting; don't queue work
 
 ### 2. Other follow-ups
 
-- [ ] Label-aware `--status` on `movements` (needs the movement enum mapping).
-- [ ] Reuse the status-label mapper in a single helper if a third lifecycle resource lands.
-- [ ] Restore `npm run lint` — `@typescript-eslint/*` deps were referenced by `eslint.config.js` but aren't installed.
+- [ ] Reuse the status-label mapper in a single helper now that we have five
+      similar maps (Adjustment / Opname / Movement / Outbound / Picklist /
+      Pack / Ship). Worth doing before the eighth one lands.
 
 ## Out of scope (for now)
 
