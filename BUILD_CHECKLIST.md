@@ -65,6 +65,16 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
       PICK/READY_TO_PACK/PACK/READY_TO_SHIP/SHIP/CANCELED).
 - [x] `labelToCode` re-exported for downstream command files.
 
+### Pack + ship (v0.7.0 — pick/pack/ship Phase 2)
+- [x] `wms pack` group: `create`, `pack-away`, `finish`, `orders`,
+      `items`, `pack-order`, `mobile-storages`, `adjust-item`.
+- [x] `wms ship` group (alias `shipment`): `create`, `proof-of-delivery`,
+      `completed`.
+- [x] `packs` resource for list/get; `ships` resource for list/get
+      (aliases `shipments`/`shipment`/`ship`).
+- [x] Label-aware `--status` for `packs` (PENDING/INPROGRESS/DONE) and
+      `ships` (READY_TO_SHIP/SHIPPED).
+
 ### Distribution
 - [x] Tarball build via `tsup` → `dist/index.js`
 - [x] GitHub Packages publishing config (`.npmrc`, `publishConfig`)
@@ -74,19 +84,15 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
 
 Ranked by ops impact (highest first). Pick one before starting; don't queue work speculatively.
 
-### 1. Pack + ship (pick/pack/ship Phase 2)
-**Why:** Completes the outbound flow that v0.6.0 started.
-**Backend surface to wrap:** `/packs` (create / pack-away / finish / list / adjust-quantity / pack-orders / pack-items / mobile-storages) and `/ship` (create / proof-of-delivery / completed / list / get).
+### 1. Wave-pick (optional Phase 3)
+**Why:** Advanced batch picking; not required for basic operations. The full pick/pack/ship flow now works without it. Skip unless ops explicitly asks for batch-picking automation.
+**Backend surface:** `/wave-pick/*` — params CRUD, picker assignment (single + bulk), wave create (single + background), status update, summary, picklist association/removal. ~14 routes — meaningful work.
 **CLI shape (sketch):**
-- `wms pack create / pack-away / finish / items <packId> / adjust-item <itemId>`
-- `wms ship create / proof-of-delivery <id> / completed <id>`
-- `packs` and `ships` resources for list/get; label-aware `--status`.
+- `wms wave-pick params <list/get/create/update/delete>`
+- `wms wave-pick create / set-picker / set-status / summary / picklists / remove-picklist`
+- `wave-picks` resource for list/get.
 
-### 2. Wave-pick (optional Phase 3)
-**Why:** Advanced batch picking; lower priority than pack/ship since basic picking now works without it. Skip unless ops explicitly asks.
-**Backend surface:** `/wave-pick/*` (params, picker assignment, summary, picklist association). Larger surface than picklist itself.
-
-### 3. Other follow-ups
+### 2. Other follow-ups
 
 - [ ] Label-aware `--status` on `movements` (needs the movement enum mapping).
 - [ ] Reuse the status-label mapper in a single helper if a third lifecycle resource lands.

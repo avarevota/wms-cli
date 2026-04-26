@@ -126,9 +126,35 @@ const picklistStatusLabel = (v: unknown): string => {
   return PICKLIST_STATUS[n] ?? String(v);
 };
 
+// Mirrors PackStatusEnum (PENDING=1, INPROGRESS=2, DONE=3).
+export const PACK_STATUS: Record<number, string> = {
+  1: 'PENDING',
+  2: 'INPROGRESS',
+  3: 'DONE',
+};
+const packStatusLabel = (v: unknown): string => {
+  if (v === null || v === undefined) return '-';
+  const n = Number(v);
+  return PACK_STATUS[n] ?? String(v);
+};
+
+// Mirrors ShipOrderStatusEnum (READY_TO_SHIP=1, SHIPPED=2).
+export const SHIP_STATUS: Record<number, string> = {
+  1: 'READY_TO_SHIP',
+  2: 'SHIPPED',
+};
+const shipStatusLabel = (v: unknown): string => {
+  if (v === null || v === undefined) return '-';
+  const n = Number(v);
+  return SHIP_STATUS[n] ?? String(v);
+};
+
 // Public-export the label-to-code helper so command files can build their
 // own labelled flags (e.g. `wms outbound update-status --status COMPLETE`).
 export { labelToCode };
+
+// Status enum maps are also exported above (OUTBOUND_STATUS / PICKLIST_STATUS /
+// PACK_STATUS / SHIP_STATUS); command files import from here.
 
 export const RESOURCES: ResourceDef[] = [
   {
@@ -381,6 +407,61 @@ export const RESOURCES: ResourceDef[] = [
       { header: 'Created', pick: (i) => fmtDate(i.createdAt) },
     ],
     detailFields: [],
+  },
+  {
+    name: 'packs',
+    aliases: ['pack'],
+    endpoint: '/packs',
+    listQuery: {
+      status: 'status',
+      mobileStorageCode: 'mobileStorageCode',
+      customerId: 'customerId',
+      from: 'startDate',
+      to: 'endDate',
+      limit: 'limit',
+      page: 'page',
+    },
+    flagTransforms: { status: labelToCode(PACK_STATUS) },
+    listColumns: [
+      { header: 'ID', pick: (i) => i.id },
+      { header: 'Code', pick: (i) => i.code ?? i.packNumber },
+      { header: 'Status', pick: (i) => packStatusLabel(i.status) },
+      { header: 'Cart', pick: (i) => i.mobileStorageCode ?? '-' },
+      { header: 'Orders', pick: (i) => i.orderCount ?? i.packOrders?.length ?? '-' },
+      { header: 'Created', pick: (i) => fmtDate(i.createdAt) },
+    ],
+    detailFields: [
+      { label: 'ID', pick: (i) => i.id },
+      { label: 'Code', pick: (i) => i.code ?? i.packNumber },
+      { label: 'Status', pick: (i) => packStatusLabel(i.status) },
+      { label: 'Cart', pick: (i) => i.mobileStorageCode },
+      { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
+    ],
+  },
+  {
+    name: 'ships',
+    aliases: ['ship', 'shipments', 'shipment'],
+    endpoint: '/ship',
+    listQuery: {
+      status: 'status',
+      awb: 'awb',
+      limit: 'limit',
+      page: 'page',
+    },
+    flagTransforms: { status: labelToCode(SHIP_STATUS) },
+    listColumns: [
+      { header: 'ID', pick: (i) => i.id },
+      { header: 'AWB', pick: (i) => i.awb ?? '-' },
+      { header: 'Status', pick: (i) => shipStatusLabel(i.status) },
+      { header: 'Created', pick: (i) => fmtDate(i.createdAt) },
+    ],
+    detailFields: [
+      { label: 'ID', pick: (i) => i.id },
+      { label: 'AWB', pick: (i) => i.awb },
+      { label: 'Status', pick: (i) => shipStatusLabel(i.status) },
+      { label: 'Proof of Delivery', pick: (i) => i.proofOfDelivery },
+      { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
+    ],
   },
   {
     name: 'movements',

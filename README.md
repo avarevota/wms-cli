@@ -46,7 +46,7 @@ wms logout                                  # clears token; apiUrl is preserved
 
 ### `wms list <resource>`
 
-Available resources: `inbounds`, `outbounds`, `stock`, `skus`, `locations`, `customers`, `movements`, `adjustments`, `opnames`, `picklists`. Singular and dashed aliases (`inbound`, `sku`, `product`, `adjustment`, `stock-opname`, `picklist`, …) also work.
+Available resources: `inbounds`, `outbounds`, `stock`, `skus`, `locations`, `customers`, `movements`, `adjustments`, `opnames`, `picklists`, `packs`, `ships`. Singular and dashed aliases (`inbound`, `sku`, `product`, `adjustment`, `stock-opname`, `picklist`, `pack`, `ship`, `shipment`, …) also work.
 
 ```bash
 wms list inbounds --status PENDING --limit 20
@@ -64,7 +64,7 @@ Flags (each applies where the backend supports it):
 |---|---|
 | `--limit <n>` | Page size, max 50 |
 | `--page <n>` | Page number |
-| `--status <v>` | Filter by status. Accepts numeric codes or enum labels for: `adjustments` / `opnames` (`PENDING`, `WAITING_FOR_APPROVAL`, `DONE`, `CANCELED`); `outbounds` (`HOLD`, `PROCESS`, `READY_TO_SHIP`, `COMPLETE`, `ERROR`, `CANCELED`); `picklists` (`PENDING`, `READY_TO_PICK`, `PICK`, `READY_TO_PACK`, `PACK`, `READY_TO_SHIP`, `SHIP`, `CANCELED`). |
+| `--status <v>` | Filter by status. Accepts numeric codes or enum labels for: `adjustments` / `opnames` (`PENDING`, `WAITING_FOR_APPROVAL`, `DONE`, `CANCELED`); `outbounds` (`HOLD`, `PROCESS`, `READY_TO_SHIP`, `COMPLETE`, `ERROR`, `CANCELED`); `picklists` (`PENDING`, `READY_TO_PICK`, `PICK`, `READY_TO_PACK`, `PACK`, `READY_TO_SHIP`, `SHIP`, `CANCELED`); `packs` (`PENDING`, `INPROGRESS`, `DONE`); `ships` (`READY_TO_SHIP`, `SHIPPED`). |
 | `--type <v>` | Adjustment type (1 = product) |
 | `--sku <v>` | Filter by SKU (where supported) |
 | `--location <v>` | Filter by location (where supported) |
@@ -240,6 +240,43 @@ wms picklist finish <picklistId>
 wms picklist update-to-shipped <picklistId> --awb JNE1234
 ```
 
+### `wms pack <action>`
+
+Pack workflow. Built from one or more finished picklists; each pack splits into pack orders (one per outbound), and each pack order has pack items (per SKU/box).
+
+```bash
+# Build the pack from finished picklists
+wms pack create --picklist-ids <pl1>,<pl2>
+
+# List + drill down
+wms list packs --status INPROGRESS
+wms pack orders <packId>
+wms pack items <packOrderId>
+wms pack pack-order <packId> <orderId>
+
+# Per-scan packing
+wms pack pack-away --pack-item-id <id> --qty 1 --item-barcode 12345
+
+# Fix mistakes / close out
+wms pack adjust-item <itemId> --quantity 2
+wms pack finish --pack-id <packId> --pack-order-id <orderId>
+
+# Diagnostic
+wms pack mobile-storages [--mobile-storage-code CART-1]
+```
+
+### `wms ship <action>`
+
+Ship workflow. Tracks the AWB lifecycle from "ready to ship" → "shipped" (delivered, with proof).
+
+```bash
+wms list ships --status READY_TO_SHIP
+wms ship create --awb JNE1234
+
+wms ship proof-of-delivery <shipId> --proof "https://files.example.com/pod-123.png"
+wms ship completed <shipId>
+```
+
 ### `wms put-away <action>`
 
 Inbound **partial put-away** workflow on `/inbound-puts`. The flow is: **create session** → **add items** (per location) → **finish** (commits stock). Multiple sessions can run for one inbound.
@@ -318,6 +355,8 @@ src/
     logs.ts             # `wms logs <kind>` (activity / webhooks / sync-stocks)
     outbound.ts         # `wms outbound <action>` (order status, picker, logs)
     picklist.ts         # `wms picklist <action>` (generate, pick, finish, ship)
+    pack.ts             # `wms pack <action>` (create, pack-away, finish, items)
+    ship.ts             # `wms ship <action>` (create, proof-of-delivery, completed)
   lib/
     client.ts           # fetch wrapper, envelope unwrap, 401/429 handling
     config.ts           # ~/.config/revota-wms store (chmod 600)

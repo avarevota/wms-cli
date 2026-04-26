@@ -12,6 +12,8 @@ import { registerOpnameCommands } from './commands/opname.js';
 import { registerLogsCommands } from './commands/logs.js';
 import { registerOutboundCommands } from './commands/outbound.js';
 import { registerPicklistCommands } from './commands/picklist.js';
+import { registerPackCommands } from './commands/pack.js';
+import { registerShipCommands } from './commands/ship.js';
 import { resourceNames } from './lib/resources.js';
 
 const program = new Command();
@@ -39,6 +41,8 @@ registerOpnameCommands(program);
 registerLogsCommands(program);
 registerOutboundCommands(program);
 registerPicklistCommands(program);
+registerPackCommands(program);
+registerShipCommands(program);
 
 program.addHelpText(
   'after',
@@ -76,6 +80,12 @@ Examples:
                          --qty 1 --warehouse-id <id> --zone-code Z1 --area-code A1 \\
                          --storage-code BIN-A1 --mobile-storage-code CART-1
   wms picklist finish <picklistId>
+  wms pack create --picklist-ids <id1>,<id2>
+  wms pack pack-away --pack-item-id <id> --qty 1 --item-barcode 12345
+  wms pack finish --pack-id <id> --pack-order-id <id>
+  wms ship create --awb JNE1234
+  wms ship proof-of-delivery <shipId> --proof "https://…/signed.png"
+  wms ship completed <shipId>
   wms config set apiUrl https://wms.example.com
 `
 );

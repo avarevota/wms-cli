@@ -6,6 +6,30 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-04-26
+
+### Added (Pack + Ship — Phase 2 of pick/pack/ship)
+- `wms pack` command group:
+  - `create --picklist-ids <csv>` — create pack from finished picklists.
+  - `pack-away --pack-item-id <id> --qty <n> [--item-barcode]` — single
+    pack scan.
+  - `finish --pack-id <id> --pack-order-id <id>` — close a pack order.
+  - `orders <packId>`, `items <packOrderId>`, `pack-order <packId> <orderId>`,
+    `mobile-storages [--mobile-storage-code]` — read helpers.
+  - `adjust-item <itemId> --quantity <n>` — fix packed quantity.
+- `wms ship` command group (alias `shipment`):
+  - `create --awb <code>` — create ship order from an AWB.
+  - `proof-of-delivery <shipId> --proof <value>` — attach POD reference.
+  - `completed <shipId>` — mark delivered.
+- New resources: `packs` (list/get) and `ships` (list/get; aliases
+  `shipments`/`shipment`/`ship`). Both with label-aware `--status`.
+- Status enum maps:
+  - `PackStatusEnum`: `PENDING`, `INPROGRESS`, `DONE`.
+  - `ShipOrderStatusEnum`: `READY_TO_SHIP`, `SHIPPED`.
+
+### Notes
+- Wave-pick (Phase 3) remains optional; deferred until ops asks.
+
 ## [0.6.0] — 2026-04-26
 
 ### Added (Outbound + Picklist — Phase 1 of pick/pack/ship)
@@ -123,7 +147,8 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 - GitHub Packages publishing config (`.npmrc`, `publishConfig`),
   ESLint config, distribution & knowledge docs.
 
-[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/avarevota/wms-cli/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/avarevota/wms-cli/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/avarevota/wms-cli/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/avarevota/wms-cli/compare/v0.4.0...v0.5.0

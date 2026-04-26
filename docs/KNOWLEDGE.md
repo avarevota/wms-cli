@@ -22,6 +22,8 @@ The CLI operates on these main resources:
 - **adjustments** - Stock-adjustment work orders (cycle-count corrections, damage/loss). Has its own lifecycle: PENDING → WAITING_FOR_APPROVAL → DONE (or CANCELED)
 - **opnames** - Stock-opname (cycle counting) sessions. Same lifecycle as adjustments, but the inputs are physical counts at locations rather than discrepancy claims
 - **picklists** - Pick work orders generated from outbound orders. Lifecycle: PENDING → READY_TO_PICK → PICK → READY_TO_PACK → PACK → READY_TO_SHIP → SHIP (or CANCELED)
+- **packs** - Pack work orders, built from finished picklists. Lifecycle: PENDING → INPROGRESS → DONE
+- **ships** - Ship orders. Tracks an AWB through delivery. Lifecycle: READY_TO_SHIP → SHIPPED (with proof-of-delivery)
 
 ### Authentication
 
@@ -354,11 +356,43 @@ wms opname approve <opnameId> --note "verified by supervisor"
 - The count is location-driven (you walk a zone and record what's there), so the items list is grouped by location with `wms opname items <opnameId> --group`.
 - The session has a `name` (unique) so it's easier to coordinate multiple counters working different zones at the same time.
 
+### Packing and Shipping a Picked Order (Phase 2)
+
+After a picklist reaches READY_TO_PACK / PACK status, the cart goes to a packing area where its contents are boxed and labelled. Then a ship order tracks the AWB to delivery.
+
+```bash
+# Find packs that need attention
+wms list packs --status INPROGRESS
+
+# Build a pack from finished picklists
+wms pack create --picklist-ids <pl1>,<pl2>
+
+# Drill down — each pack splits into pack orders (one per outbound), each with pack items (per SKU)
+wms pack orders <packId>
+wms pack items <packOrderId>
+
+# Per-scan packing (one call per item placed in the box)
+wms pack pack-away --pack-item-id <id> --qty 1 --item-barcode 12345
+
+# Adjust if you over/under-count
+wms pack adjust-item <itemId> --quantity 2
+
+# Finish the pack order, then create the ship order
+wms pack finish --pack-id <packId> --pack-order-id <orderId>
+
+wms ship create --awb JNE1234
+wms list ships --status READY_TO_SHIP
+
+# Once carriers return proof, mark complete
+wms ship proof-of-delivery <shipId> --proof "https://files.example.com/pod-123.png"
+wms ship completed <shipId>
+```
+
 ### Picking and Shipping an Outbound Order (Phase 1)
 
 The outbound flow is multi-stage: **outbound order** (HOLD → PROCESS → READY_TO_SHIP → COMPLETE) → **picklist** (generated from one or more orders) → **pick** (per-scan, into a mobile-storage cart) → **pack** → **ship**.
 
-This release covers the order-management and pick portions; pack/ship will land in a follow-up.
+This Phase covers the order-management and pick portions. Phase 2 (above) covers pack and ship.
 
 ```bash
 # Find work and triage
