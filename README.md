@@ -46,7 +46,7 @@ wms logout                                  # clears token; apiUrl is preserved
 
 ### `wms list <resource>`
 
-Available resources: `inbounds`, `outbounds`, `stock`, `skus`, `locations`, `customers`, `movements`, `adjustments`. Singular aliases (`inbound`, `sku`, `product`, `adjustment`, …) also work.
+Available resources: `inbounds`, `outbounds`, `stock`, `skus`, `locations`, `customers`, `movements`, `adjustments`, `opnames`. Singular and dashed aliases (`inbound`, `sku`, `product`, `adjustment`, `stock-opname`, …) also work.
 
 ```bash
 wms list inbounds --status PENDING --limit 20
@@ -137,6 +137,53 @@ wms inbound cancel <inboundId>
 
 `update-order` is partial — pass any subset of `--expected-quantity`, `--batch-number`, `--expired-date`.
 
+### `wms opname <action>`
+
+Stock-opname / cycle-counting workflow. Mirrors adjustment in shape (PENDING → WAITING_FOR_APPROVAL → DONE / CANCELED) but the count source is "physical inventory at location", not a discrepancy ticket.
+
+```bash
+wms opname create --name "Q2 cycle count, zone A" \
+  --warehouse-id <id> --assigned-to <userId> [--type 1] [--customer-id …] [--brand-id …] [--note …] [--due-date 2026-05-15]
+
+# Discover product variants available to add (helper)
+wms opname products <opnameId> --warehouse-id <id> [--zone-code Z1 --area-code A1 --search abc]
+
+# Add counted items in batch (one storage list per group)
+wms opname add-items \
+  --data '[{"stockOpnameId":"<id>","productVariantIds":["<v1>","<v2>"],"storages":[{"warehouseId":"<id>","zoneCode":"Z1","areaCode":"A1","storageCode":"BIN-A1"}]}]'
+
+# Or batch-update counted quantities by barcode after the count is done
+wms opname batch-update-items <opnameId> \
+  --items '[{"barcode":"123","storage":{"warehouseId":"<id>","zoneCode":"Z1","areaCode":"A1","storageCode":"BIN-A1"},"actualQuantity":12}]'
+
+# Inspect & adjust per-item
+wms opname items <opnameId> [--type 1 --group --limit 50 --page 1]
+wms opname adjust-item <itemId> --quantity 11
+wms opname cancel-item <itemId>
+
+# Update header before finishing
+wms opname update <opnameId> --name "…" --due-date 2026-05-30 --note "extended"
+
+# Lifecycle
+wms opname finish <opnameId>            # PENDING → WAITING_FOR_APPROVAL
+wms opname approve <opnameId> --note    # → DONE (applies stock corrections)
+wms opname cancel <opnameId>            # PATCH /cancel
+wms opname delete <opnameId>            # soft delete
+```
+
+### `wms logs <kind>`
+
+Read-only audit / activity surfaces. Bounded windows are enforced where the backend requires them.
+
+```bash
+wms logs activity   --module INBOUND --user-id <id> --from 2026-04-01 --to 2026-04-26
+wms logs modules                                            # enum values for --module above
+wms logs webhooks   --from 2026-04-01 --to 2026-04-26 --event 1 --keyword forstok
+wms logs sync-stocks --from 2026-04-01 --type 1 --keyword "out of stock"
+```
+
+`logs webhooks` requires `--from` and `--to` (backend constraint). Use `--json` if you'd rather pipe the raw envelope into `jq`.
+
 ### `wms put-away <action>`
 
 Inbound **partial put-away** workflow on `/inbound-puts`. The flow is: **create session** → **add items** (per location) → **finish** (commits stock). Multiple sessions can run for one inbound.
@@ -211,6 +258,8 @@ src/
     adjustment.ts       # `wms adjustment <action>` workflow group
     inbound.ts          # `wms inbound <action>` (orders, update-order, finish, cancel)
     put-away.ts         # `wms put-away <action>` (partial put-away workflow)
+    opname.ts           # `wms opname <action>` (cycle-count workflow)
+    logs.ts             # `wms logs <kind>` (activity / webhooks / sync-stocks)
   lib/
     client.ts           # fetch wrapper, envelope unwrap, 401/429 handling
     config.ts           # ~/.config/revota-wms store (chmod 600)

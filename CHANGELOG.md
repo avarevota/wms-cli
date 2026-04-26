@@ -6,6 +6,21 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-04-26
+
+### Added
+- `opnames` resource for `wms list` / `wms get` (aliases: `opname`,
+  `stock-opnames`, `stock-opname`).
+- `wms opname` command group covering the cycle-count lifecycle:
+  `create`, `update`, `products`, `add-items`, `batch-update-items`,
+  `items` (with `--group` for location grouping), `adjust-item`,
+  `cancel-item`, `cancel`, `finish`, `approve`, `delete`.
+- `wms logs` command group for read-only operational logs:
+  `activity`, `modules`, `webhooks` (with required `--from` / `--to`),
+  `sync-stocks`.
+- README + KNOWLEDGE: opname workflow + logs surface documented; roadmap
+  marks opname as shipped, outbound bumped to top of "next".
+
 ## [0.4.0] — 2026-04-26
 
 ### Added
@@ -63,7 +78,8 @@ this project uses [SemVer](https://semver.org/) (pre-1.0: minor = features, patc
 - GitHub Packages publishing config (`.npmrc`, `publishConfig`),
   ESLint config, distribution & knowledge docs.
 
-[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/avarevota/wms-cli/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/avarevota/wms-cli/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/avarevota/wms-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/avarevota/wms-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/avarevota/wms-cli/compare/v0.1.0...v0.2.0

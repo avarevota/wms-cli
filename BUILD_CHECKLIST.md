@@ -36,6 +36,14 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
 - [x] Status label helper for `InboundPutAwayStatusEnum`
 - [x] CHANGELOG.md introduced (Keep a Changelog format)
 
+### Stock opname + logs (v0.5.0)
+- [x] `opnames` resource for `list` / `get` (with aliases)
+- [x] `wms opname` group: `create`, `update`, `products`, `add-items`,
+      `batch-update-items`, `items`, `adjust-item`, `cancel-item`,
+      `cancel`, `finish`, `approve`, `delete`
+- [x] `wms logs` group: `activity`, `modules`, `webhooks`, `sync-stocks`
+- [x] Status label helper for `OpnameStatusEnum`
+
 ### Distribution
 - [x] Tarball build via `tsup` → `dist/index.js`
 - [x] GitHub Packages publishing config (`.npmrc`, `publishConfig`)
@@ -45,20 +53,18 @@ For user-facing docs see [README.md](README.md) and [docs/KNOWLEDGE.md](docs/KNO
 
 Ranked by ops impact (highest first). Pick one before starting; don't queue work speculatively.
 
-### 1. Stock opname (cycle counting)
-**Why:** Pairs with adjustment; the read-only piece of the stock-control story.
-**Backend surface to wrap:** `/stock-opname` controller — session create / add items / submit / approve.
-**CLI shape (sketch):** mirror `wms adjustment` — `create / save-products / items / finish / approve / cancel`.
+### 1. Outbound pick / pack / ship
+**Why:** Customer-facing daily ops; the natural counterpart to the inbound flow.
+**Scope warning:** Larger surface than inbound — picklist generation, wave picks, pack confirmation, ship label, multiple status enums. Plan to split into sub-phases (pick first, then pack/ship).
 
-### 2. Outbound pick / pack / ship
-**Why:** Customer-facing daily ops; the natural counterpart to the inbound flow we just shipped.
-**Scope warning:** Larger surface than inbound — picklist generation, wave picks, pack confirmation, ship label, multiple status enums. Consider splitting into sub-phases (pick first, then pack/ship).
-
-### 3. Polish
-
-- [ ] `--status PENDING` (label) in addition to `--status 1` (numeric) on adjustments / movements / opname.
+### 2. Adjustment / opname polish
+- [ ] `wms adjustment products <id>` helper (wraps `GET /adjustments/:id/products`) so users can discover variants when building `save-products` payloads.
 - [ ] `wms adjustment add-item <adjId>` convenience subcommand for single-line additions (no JSON).
-- [ ] `wms list adjustments --customer-id` / `--brand-id` autocomplete from local cache (later).
+- [ ] `--status PENDING` (label) in addition to `--status 1` (numeric) on adjustments / opname / movements.
+
+### 3. Other follow-ups
+
+- [ ] Reuse `OpnameStatusEnum` / `AdjustmentStatusEnum` mapping in a single helper if a third lifecycle resource lands.
 - [ ] Restore `npm run lint` — `@typescript-eslint/*` deps were referenced by `eslint.config.js` but aren't installed.
 
 ## Out of scope (for now)

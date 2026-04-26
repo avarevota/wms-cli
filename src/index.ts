@@ -8,6 +8,8 @@ import { registerUpdateCommand } from './commands/update.js';
 import { registerAdjustmentCommands } from './commands/adjustment.js';
 import { registerInboundCommands } from './commands/inbound.js';
 import { registerPutAwayCommands } from './commands/put-away.js';
+import { registerOpnameCommands } from './commands/opname.js';
+import { registerLogsCommands } from './commands/logs.js';
 import { resourceNames } from './lib/resources.js';
 
 const program = new Command();
@@ -31,6 +33,8 @@ registerUpdateCommand(program);
 registerAdjustmentCommands(program);
 registerInboundCommands(program);
 registerPutAwayCommands(program);
+registerOpnameCommands(program);
+registerLogsCommands(program);
 
 program.addHelpText(
   'after',
@@ -55,6 +59,11 @@ Examples:
   wms put-away add-item <putAwayId> --inbound-order-id <id> --warehouse-id <id> \\
                        --zone-code Z1 --area-code A1 --storage-code BIN-A1 --accepted 10
   wms put-away finish <putAwayId>
+  wms opname create --name "Q2 cycle count" --warehouse-id <id> --assigned-to <userId>
+  wms opname items <opnameId>
+  wms opname approve <opnameId> --note "verified"
+  wms logs activity --module INBOUND --from 2026-04-01 --to 2026-04-26
+  wms logs webhooks --from 2026-04-01 --to 2026-04-26 --event 1
   wms config set apiUrl https://wms.example.com
 `
 );

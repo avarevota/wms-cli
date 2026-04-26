@@ -57,6 +57,20 @@ const adjustmentStatusLabel = (v: unknown): string => {
   return ADJUSTMENT_STATUS[n] ?? String(v);
 };
 
+// Same numeric mapping as AdjustmentStatus, but kept separate so the two
+// domains can drift independently if/when the backend changes.
+const OPNAME_STATUS: Record<number, string> = {
+  1: 'PENDING',
+  2: 'WAITING_FOR_APPROVAL',
+  3: 'DONE',
+  99: 'CANCELED',
+};
+const opnameStatusLabel = (v: unknown): string => {
+  if (v === null || v === undefined) return '-';
+  const n = Number(v);
+  return OPNAME_STATUS[n] ?? String(v);
+};
+
 export const RESOURCES: ResourceDef[] = [
   {
     name: 'inbounds',
@@ -238,6 +252,45 @@ export const RESOURCES: ResourceDef[] = [
       { label: 'Due Date', pick: (i) => fmtDate(i.dueDate) },
       { label: 'Note', pick: (i) => i.note },
       { label: 'Discrepancies', pick: (i) => i.discrepancies ?? 0 },
+      { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
+    ],
+  },
+  {
+    name: 'opnames',
+    aliases: ['opname', 'stock-opnames', 'stock-opname'],
+    endpoint: '/stock-opnames',
+    listQuery: {
+      status: 'opnameStatus',
+      type: 'opnameType',
+      customerId: 'customerId',
+      brandId: 'brandId',
+      warehouseId: 'warehouseId',
+      assigned: 'assigned',
+      from: 'startDate',
+      to: 'endDate',
+      limit: 'limit',
+      page: 'page',
+    },
+    listColumns: [
+      { header: 'ID', pick: (i) => i.id },
+      { header: 'Code', pick: (i) => i.code },
+      { header: 'Name', pick: (i) => i.name },
+      { header: 'Status', pick: (i) => opnameStatusLabel(i.status) },
+      { header: 'Warehouse', pick: (i) => i.warehouseName ?? i.warehouseId },
+      { header: 'Due', pick: (i) => fmtDate(i.dueDate) },
+    ],
+    detailFields: [
+      { label: 'ID', pick: (i) => i.id },
+      { label: 'Code', pick: (i) => i.code },
+      { label: 'Name', pick: (i) => i.name },
+      { label: 'Status', pick: (i) => opnameStatusLabel(i.status) },
+      { label: 'Type', pick: (i) => i.type },
+      { label: 'Warehouse', pick: (i) => i.warehouseName ?? i.warehouseId },
+      { label: 'Customer', pick: (i) => i.customerName ?? i.customerId },
+      { label: 'Brand', pick: (i) => i.brandName ?? i.brandId },
+      { label: 'Assigned To', pick: (i) => i.assignedTo },
+      { label: 'Due Date', pick: (i) => fmtDate(i.dueDate) },
+      { label: 'Note', pick: (i) => i.note },
       { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
     ],
   },

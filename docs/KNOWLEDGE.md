@@ -20,6 +20,7 @@ The CLI operates on these main resources:
 - **customers** - Customer accounts managed in the system
 - **movements** - Internal stock transfers and adjustments
 - **adjustments** - Stock-adjustment work orders (cycle-count corrections, damage/loss). Has its own lifecycle: PENDING → WAITING_FOR_APPROVAL → DONE (or CANCELED)
+- **opnames** - Stock-opname (cycle counting) sessions. Same lifecycle as adjustments, but the inputs are physical counts at locations rather than discrepancy claims
 
 ### Authentication
 
@@ -315,6 +316,62 @@ wms list movements --status 1 --limit 10
 # View movement history
 wms list movements --from 2026-01-01 --to 2026-04-22
 ```
+
+### Running a Stock Opname (cycle count)
+
+Opname is the structured way to count physical stock and reconcile it with the system. The lifecycle mirrors adjustment but the data flow is "count first, write deltas later".
+
+```bash
+# 1. Open a session — name is unique per warehouse
+wms opname create --name "Q2-cycle-zoneA-2026" \
+  --warehouse-id <id> --assigned-to <userId> --due-date 2026-05-15 \
+  --note "Q2 cycle count, zone A"
+
+# 2. Discover variants present in the targeted area (optional helper)
+wms opname products <opnameId> --warehouse-id <id> --zone-code Z1 --area-code A1
+
+# 3. Add the items to count, scoped by storage groups
+wms opname add-items \
+  --data '[{"stockOpnameId":"<opnameId>","productVariantIds":["<v1>","<v2>"],"storages":[{"warehouseId":"<id>","zoneCode":"Z1","areaCode":"A1","storageCode":"BIN-A1"}]}]'
+
+# 4. After the floor count, push counted quantities by barcode
+wms opname batch-update-items <opnameId> \
+  --items '[{"barcode":"<sku>","storage":{"warehouseId":"<id>","zoneCode":"Z1","areaCode":"A1","storageCode":"BIN-A1"},"actualQuantity":12}]'
+
+# Or correct a single line:
+wms opname adjust-item <itemId> --quantity 11
+wms opname cancel-item <itemId>
+
+# 5. Submit for approval (PENDING → WAITING_FOR_APPROVAL)
+wms opname finish <opnameId>
+
+# 6. Approve — applies the deltas to inventory (→ DONE)
+wms opname approve <opnameId> --note "verified by supervisor"
+```
+
+`opname` differs from `adjustment` in two practical ways:
+- The count is location-driven (you walk a zone and record what's there), so the items list is grouped by location with `wms opname items <opnameId> --group`.
+- The session has a `name` (unique) so it's easier to coordinate multiple counters working different zones at the same time.
+
+### Inspecting Logs (activity / webhooks / sync-stocks)
+
+Three log surfaces are exposed read-only. Use them to debug "why didn't this happen?" questions:
+
+```bash
+# All user actions in a module / time range
+wms logs activity --module INBOUND --from 2026-04-01 --to 2026-04-26
+
+# Discover the module enum values usable above
+wms logs modules
+
+# External callbacks (Forstok / Ginee / Qianyi). Time window required.
+wms logs webhooks --from 2026-04-01 --to 2026-04-26 --event 1 --keyword forstok
+
+# Stock pushes back to channels (per-SKU)
+wms logs sync-stocks --from 2026-04-01 --type 1 --keyword "out of stock"
+```
+
+`logs webhooks` requires `--from` and `--to` (backend rejects unbounded queries).
 
 ### Running a Stock Adjustment (cycle-count correction)
 
