@@ -14,8 +14,12 @@
     "build": "tsup src/index.ts --format esm --target node20 --out-dir dist --clean",
     "dev": "tsx src/index.ts",
     "lint": "eslint src --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "cli-table3": "^0.6.5",
     "commander": "^13.0.0",
@@ -37,9 +41,8 @@
     "revota"
   ],
   "license": "UNLICENSED",
-  "private": true,
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org/"
   },
   "repository": {
     "type": "git",

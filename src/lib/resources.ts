@@ -67,6 +67,7 @@ const adjustmentStatusLabel = (v: unknown): string => {
 // can still pass numeric values directly.
 function labelToCode(map: Record<number, string>): (raw: string) => string {
   const lookup = new Map<string, string>();
+  const validLabels = Object.values(map).join(', ');
   for (const [code, label] of Object.entries(map)) {
     lookup.set(label.toLowerCase(), code);
   }
@@ -75,7 +76,13 @@ function labelToCode(map: Record<number, string>): (raw: string) => string {
     const trimmed = String(raw).trim();
     if (trimmed === '') return trimmed;
     if (/^\d+$/.test(trimmed)) return trimmed;
-    return lookup.get(trimmed.toLowerCase()) ?? trimmed;
+    const code = lookup.get(trimmed.toLowerCase());
+    if (code === undefined) {
+      throw new Error(
+        `Invalid status "${raw}". Valid values: ${validLabels} (or numeric codes)`
+      );
+    }
+    return code;
   };
 }
 
@@ -162,6 +169,21 @@ const movementStatusLabel = (v: unknown): string => {
   return MOVEMENT_STATUS[n] ?? String(v);
 };
 
+// Mirrors InboundStatusEnum (PENDING=1, AVAILABLE=2, IN_PROGRESS=3, CANCELED=99).
+// InboundStatusFilterEnum adds REJECTED=3, but we map both 3 values to IN_PROGRESS
+// since the CLI user sees the entity status, not the filter variant.
+export const INBOUND_STATUS: Record<number, string> = {
+  1: 'PENDING',
+  2: 'AVAILABLE',
+  3: 'IN_PROGRESS',
+  99: 'CANCELED',
+};
+const inboundStatusLabel = (v: unknown): string => {
+  if (v === null || v === undefined) return '-';
+  const n = Number(v);
+  return INBOUND_STATUS[n] ?? String(v);
+};
+
 // Public-export the label-to-code helper so command files can build their
 // own labelled flags (e.g. `wms outbound update-status --status COMPLETE`).
 export { labelToCode };
@@ -175,16 +197,17 @@ export const RESOURCES: ResourceDef[] = [
     aliases: ['inbound'],
     endpoint: '/inbounds',
     listQuery: { status: 'status', limit: 'limit', page: 'page' },
+    flagTransforms: { status: labelToCode(INBOUND_STATUS) },
     listColumns: [
       { header: 'ID', pick: (i) => i.id },
       { header: 'Reference', pick: (i) => i.reference ?? i.code },
-      { header: 'Status', pick: (i) => i.status },
+      { header: 'Status', pick: (i) => inboundStatusLabel(i.status) },
       { header: 'Date', pick: (i) => fmtDate(i.createdAt) },
     ],
     detailFields: [
       { label: 'ID', pick: (i) => i.id },
       { label: 'Reference', pick: (i) => i.reference ?? i.code },
-      { label: 'Status', pick: (i) => i.status },
+      { label: 'Status', pick: (i) => inboundStatusLabel(i.status) },
       { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
       { label: 'Items', pick: (i) => i.items?.length ?? i.itemCount ?? 0 },
     ],

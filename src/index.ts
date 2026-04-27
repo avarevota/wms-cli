@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
+import { readFileSync, existsSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { registerAuthCommands } from './commands/auth.js';
 import { registerConfigCommands } from './commands/config.js';
 import { registerListCommand } from './commands/list.js';
@@ -14,14 +17,31 @@ import { registerOutboundCommands } from './commands/outbound.js';
 import { registerPicklistCommands } from './commands/picklist.js';
 import { registerPackCommands } from './commands/pack.js';
 import { registerShipCommands } from './commands/ship.js';
+import { registerUpgradeCommand } from './commands/upgrade.js';
 import { resourceNames } from './lib/resources.js';
+
+function loadPackageJson(): { version: string; name: string } {
+  const paths = [
+    resolve(dirname(fileURLToPath(import.meta.url)), '../package.json'),
+    resolve(process.cwd(), 'package.json'),
+    resolve(dirname(fileURLToPath(import.meta.url)), '../../package.json'),
+  ];
+  for (const p of paths) {
+    if (existsSync(p)) {
+      return JSON.parse(readFileSync(p, 'utf-8'));
+    }
+  }
+  return { version: '0.0.0', name: '@revota/wms-cli' };
+}
+
+const pkg = loadPackageJson();
 
 const program = new Command();
 
 program
   .name('wms')
   .description('Revota WMS CLI')
-  .version('0.1.0')
+  .version(pkg.version)
   .option('--verbose', 'Log request/response details (tokens redacted)')
   .hook('preAction', (thisCommand) => {
     if (thisCommand.opts().verbose) {
@@ -43,6 +63,7 @@ registerOutboundCommands(program);
 registerPicklistCommands(program);
 registerPackCommands(program);
 registerShipCommands(program);
+registerUpgradeCommand(program);
 
 program.addHelpText(
   'after',
