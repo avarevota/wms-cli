@@ -1,6 +1,6 @@
 {
   "name": "@revota/wms-cli",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "CLI for Revota WMS",
   "type": "module",
   "engines": {
