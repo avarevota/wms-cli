@@ -17,7 +17,6 @@ import { registerOutboundCommands } from './commands/outbound.js';
 import { registerPicklistCommands } from './commands/picklist.js';
 import { registerPackCommands } from './commands/pack.js';
 import { registerShipCommands } from './commands/ship.js';
-import { registerUpgradeCommand } from './commands/upgrade.js';
 import { resourceNames } from './lib/resources.js';
 
 function loadPackageJson(): { version: string; name: string } {
@@ -63,7 +62,6 @@ registerOutboundCommands(program);
 registerPicklistCommands(program);
 registerPackCommands(program);
 registerShipCommands(program);
-registerUpgradeCommand(program);
 
 program.addHelpText(
   'after',

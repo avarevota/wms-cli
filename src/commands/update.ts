@@ -1,4 +1,8 @@
 import { Command } from 'commander';
+import { spawn } from 'child_process';
+import { readFileSync, existsSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import {
   RESOURCES,
   fetchUpdate,
@@ -9,6 +13,22 @@ import {
 } from '../lib/resources.js';
 import { printError, printJson, printSuccess } from '../lib/output.js';
 import { handleError } from '../lib/errors.js';
+
+function loadPackageJson(): { version: string; name: string } {
+  const paths = [
+    resolve(dirname(fileURLToPath(import.meta.url)), '../package.json'),
+    resolve(process.cwd(), 'package.json'),
+    resolve(dirname(fileURLToPath(import.meta.url)), '../../package.json'),
+  ];
+  for (const p of paths) {
+    if (existsSync(p)) {
+      return JSON.parse(readFileSync(p, 'utf-8'));
+    }
+  }
+  return { version: '0.0.0', name: '@revota/wms-cli' };
+}
+
+const pkg = loadPackageJson();
 
 function toCamel(apiKey: string): string {
   return apiKey;
@@ -73,16 +93,81 @@ function buildPayload(
   return payload;
 }
 
+function runNpm(args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
+  return new Promise((resolve) => {
+    const child = spawn('npm', args, { shell: true });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (data) => { stdout += data; });
+    child.stderr.on('data', (data) => { stderr += data; });
+    child.on('close', (code) => {
+      resolve({ code: code ?? 1, stdout, stderr });
+    });
+  });
+}
+
+async function getLatestVersion(): Promise<string | null> {
+  try {
+    const { stdout } = await runNpm(['view', pkg.name, 'version']);
+    return stdout.trim();
+  } catch {
+    return null;
+  }
+}
+
+async function doSelfUpdate(options: { json?: boolean }): Promise<void> {
+  const currentVersion = pkg.version;
+  const latestVersion = await getLatestVersion();
+
+  if (options.json) {
+    printJson({
+      current: currentVersion,
+      latest: latestVersion,
+      upToDate: latestVersion === currentVersion,
+    });
+    return;
+  }
+
+  console.log(`Current version: ${currentVersion}`);
+
+  if (!latestVersion) {
+    printError('Failed to check for updates. Please try again later.');
+    process.exit(1);
+  }
+
+  console.log(`Latest version:  ${latestVersion}`);
+
+  if (latestVersion === currentVersion) {
+    printSuccess('Already up to date!');
+    return;
+  }
+
+  console.log(`\nUpdating to ${latestVersion}...`);
+  const { code, stderr } = await runNpm([
+    'install',
+    '-g',
+    `${pkg.name}@${latestVersion}`,
+  ]);
+
+  if (code !== 0) {
+    printError(`Update failed: ${stderr}`);
+    process.exit(1);
+  }
+
+  printSuccess(`Successfully updated to ${latestVersion}!`);
+  console.log(`Run 'wms --version' to verify.`);
+}
+
 export function registerUpdateCommand(program: Command): void {
   const updatable = RESOURCES.filter((r) => r.update);
   const updatableNames = updatable.map((r) => r.name).sort();
 
   const cmd = program
-    .command('update <resource> <id>')
+    .command('update [resource] [id]')
     .description(
-      `Update a record (${updatableNames.join(', ') || 'no updatable resources'})`
+      `Update a record (${updatableNames.join(', ') || 'no updatable resources'}) or update the CLI itself`
     )
-    .option('--json', 'Output raw JSON of the updated record')
+    .option('--json', 'Output raw JSON')
     .option(
       '--data <json>',
       'Raw JSON payload (merged first; individual flags override)'
@@ -101,7 +186,18 @@ export function registerUpdateCommand(program: Command): void {
     }
   }
 
-  cmd.action(async (resourceName: string, id: string, options) => {
+  cmd.action(async (resourceName: string | undefined, id: string | undefined, options) => {
+    // Self-update when no resource provided
+    if (!resourceName) {
+      try {
+        await doSelfUpdate(options);
+        return;
+      } catch (err) {
+        handleError(err);
+      }
+    }
+
+    // Record update
     const resource = resolveResource(resourceName);
     if (!resource) {
       printError(
@@ -113,6 +209,13 @@ export function registerUpdateCommand(program: Command): void {
     if (!resource.update) {
       printError(
         `"${resource.name}" cannot be updated. Updatable: ${updatableNames.join(', ') || 'none'}`
+      );
+      process.exit(1);
+    }
+
+    if (!id) {
+      printError(
+        `Missing id. Usage: wms update <resource> <id> [options]`
       );
       process.exit(1);
     }
