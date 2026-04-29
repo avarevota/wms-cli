@@ -20,6 +20,9 @@ export function registerListCommand(program: Command): void {
     .option('--brand-id <id>', 'Filter by brand id (where supported)')
     .option('--warehouse-id <id>', 'Filter by warehouse id (where supported)')
     .option('--assigned <value>', 'Filter by assignee (where supported)')
+    .option('--provider <value>', 'Filter by provider (where supported)')
+    .option('--event <value>', 'Filter by event (where supported)')
+    .option('--keyword <value>', 'Free-text keyword (where supported)')
     .option('--limit <n>', 'Page size, max 50 (where supported)')
     .option('--page <n>', 'Page number (where supported)');
 
