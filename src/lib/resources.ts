@@ -512,6 +512,32 @@ export const RESOURCES: ResourceDef[] = [
       { label: 'Created', pick: (i) => fmtDate(i.createdAt) },
     ],
   },
+  {
+    name: 'webhook-logs',
+    aliases: ['webhook-log'],
+    endpoint: '/webhook/logs',
+    supportsGet: false,
+    listQuery: {
+      provider: 'provider',
+      from: 'from',
+      to: 'to',
+      event: 'event',
+      keyword: 'keyword',
+      limit: 'limit',
+      page: 'page',
+    },
+    listColumns: [
+      { header: 'Provider', pick: (i) => i.providerName ?? '-' },
+      { header: 'Reference', pick: (i) => i.referenceId ?? '-' },
+      { header: 'Event', pick: (i) => i.event ?? '-' },
+      {
+        header: 'Errors',
+        pick: (i) => (Array.isArray(i.errors) ? i.errors.length : 0),
+      },
+      { header: 'Date', pick: (i) => fmtDate(i.createdAt) },
+    ],
+    detailFields: [],
+  },
 ];
 
 export function resolveResource(name: string): ResourceDef | null {
